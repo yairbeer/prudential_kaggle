@@ -30,8 +30,8 @@ print train.shape[1], ' columns'
 
 best_metric = 10
 best_params = []
-param_grid = {'silent': [1], 'nthread': [4], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.1],
-              'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [10],
+param_grid = {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.1],
+              'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [300],
               'subsample': [0.75]}
 
 for params in ParameterGrid(param_grid):
@@ -45,7 +45,7 @@ for params in ParameterGrid(param_grid):
     print 'start CV'
 
     # CV
-    cv_n = 4
+    cv_n = 8
     kf = StratifiedKFold(np.array(train_result).ravel(), n_folds=cv_n, shuffle=True)
     metric = []
     meta_estimator_xgboost = np.zeros((train_arr.shape[0], 8))
