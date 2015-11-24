@@ -22,14 +22,6 @@ def remove_sparse(dataset, n_valid_samples):
     dataset = dataset.drop(dead_cols, axis=1)
     return dataset
 
-
-def fill_zeros(arr, n_digits):
-    for i_in in range(arr.shape[0]):
-        if len(arr[i_in]) < n_digits:
-            arr[i_in] = arr[i_in] + str(10 ** (n_digits - len(arr[i_in])))[1:]
-    return arr
-
-
 """
 preprocessing data
 """
@@ -115,6 +107,9 @@ for col in col_train:
     if col in col_test:
         col_common.append(col)
 print col_common
+
+train = train[col_common]
+test = test[col_common]
 
 print 'write to data'
 train.to_csv("train_dummied.csv")
