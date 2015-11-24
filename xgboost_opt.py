@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.cross_validation import train_test_split
-from sklearn.metrics import log_loss
+from sklearn.metrics import hamming_loss
 import xgboostlib.xgboost as xgboost
 
 __author__ = 'YBeer'
@@ -54,8 +54,8 @@ for params in ParameterGrid(param_grid):
     class_pred = xgclassifier.predict(xg_test)
 
     # evaluate
-    # print log_loss(y_test, class_pred)
-    metric = log_loss(y_test, class_pred)
+    # print hamming_loss(y_test, class_pred)
+    metric = hamming_loss(y_test, class_pred)
 
     print 'The log loss is: ', metric
     if metric < best_metric:

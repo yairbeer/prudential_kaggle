@@ -38,7 +38,7 @@ test = stding.transform(test_arr)
 best_metric = 10
 best_params = []
 param_grid = {'silent': [1], 'nthread': [4], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.1],
-              'objective': ['multi:softmax'], 'max_depth': [5], 'num_round': [100],
+              'objective': ['multi:softmax'], 'max_depth': [3, 5, 7], 'num_round': [300],
               'subsample': [0.7]}
 
 for params in ParameterGrid(param_grid):
@@ -70,4 +70,4 @@ for params in ParameterGrid(param_grid):
 
     print submission_file['Response'].value_counts()
 
-    submission_file.to_csv("xgboost_5depth_v5_ss07.csv")
+    submission_file.to_csv("xgboost_%sdepth.csv" % params['max_depth'])
