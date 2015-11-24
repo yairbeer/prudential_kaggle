@@ -5,8 +5,8 @@ __author__ = 'WiBeer'
 
 
 def add_prefix(dataset, prefix):
-    col_names = np.array(dataset.columns.values).astype('str')
-    for i_in in range(col_names.shape[0]):
+    col_names = list(np.array(dataset.columns.values).astype('str'))
+    for i_in in range(len(col_names)):
         col_names[i_in] = prefix + col_names[i_in]
     dataset.columns = col_names
     return dataset
@@ -33,7 +33,7 @@ def fill_zeros(arr, n_digits):
 """
 preprocessing data
 """
-need_dummying = ['Train_flag', 'Product_Info_1', 'Product_Info_2', 'Product_Info_3', 'Product_Info_5', 'Product_Info_6',
+need_dummying = ['Product_Info_1', 'Product_Info_2', 'Product_Info_3', 'Product_Info_5', 'Product_Info_6',
                  'Product_Info_7', 'Employment_Info_2', 'Employment_Info_3', 'Employment_Info_5', 'InsuredInfo_1',
                  'InsuredInfo_2', 'InsuredInfo_3', 'InsuredInfo_4', 'InsuredInfo_5', 'InsuredInfo_6', 'InsuredInfo_7',
                  'Insurance_History_1', 'Insurance_History_2', 'Insurance_History_3', 'Insurance_History_4',
@@ -54,15 +54,15 @@ print 'read train data'
 trainset = pd.DataFrame.from_csv('train.csv', index_col=0)
 
 train_result = trainset['Response']
-print train_result.value_counts()
-train_result.to_csv("train_result.csv")
+# print train_result.value_counts()
+# train_result.to_csv("train_result.csv")
 
 trainset_cols = list(trainset.columns.values)
-trainset = trainset.drop('Response')
+trainset = trainset.drop('Response', axis=1)
 
 trainset = trainset.fillna('9999')
 
-trainset[need_dummying] = trainset[need_dummying].astype(str)
+# trainset[need_dummying] = trainset[need_dummying].astype(str)
 n = trainset.shape[0]
 
 sparsity = 0.95
@@ -71,11 +71,12 @@ sparsity = n * (1 - sparsity)
 print 'dummy train variables'
 dummies = []
 for var in need_dummying:
-    print 'dummyfing %s' % var
+    print 'dummyfing trainset %s' % var
+    # print trainset[var]
     dummy_col = pd.get_dummies(trainset[var])
     add_prefix(dummy_col, var + '_')
     dummies.append(dummy_col)
-    trainset = trainset.drop(var)
+    trainset = trainset.drop(var, axis=1)
 
 train = pd.concat([trainset] + dummies, axis=1)
 # train = remove_sparse(train, sparsity * 0.25)
@@ -94,11 +95,11 @@ sparsity = n_test * (1 - sparsity)
 print 'dummy test variables'
 dummies = []
 for var in need_dummying:
-    print 'dummyfing %s' % var
+    print 'dummyfing testset %s' % var
     dummy_col = pd.get_dummies(testset[var])
     add_prefix(dummy_col, var + '_')
     dummies.append(dummy_col)
-    testset = testset.drop(var)
+    testset = testset.drop(var, axis=1)
 
 test = pd.concat([testset] + dummies, axis=1)
 # test = remove_sparse(test, sparsity * 0.25)
