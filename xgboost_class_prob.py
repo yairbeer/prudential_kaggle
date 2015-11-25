@@ -28,6 +28,11 @@ print train.shape[1], ' columns'
 # for i in range(train_arr.shape[1]):
 #     print col_list[i], chi2_params[0][i]
 
+# Standardizing
+stding = StandardScaler()
+train_arr = stding.fit_transform(train_arr)
+test_arr = stding.transform(test_arr)
+
 best_metric = 10
 best_params = []
 param_grid = {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.1],
@@ -37,10 +42,7 @@ param_grid = {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['
 for params in ParameterGrid(param_grid):
     print params
 
-    # Standardizing
-    stding = StandardScaler()
-    train_arr = stding.fit_transform(train_arr)
-    test_arr = stding.transform(test_arr)
+
 
     print 'start CV'
 

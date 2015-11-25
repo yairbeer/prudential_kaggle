@@ -2,10 +2,8 @@ from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+import xgboostlib.xgboost as xgboost
 from sklearn.cross_validation import StratifiedKFold
-from sklearn.metrics import mean_squared_error
-from sklearn.ensemble import GradientBoostingRegressor
-import matplotlib.pyplot as plt
 
 __author__ = 'YBeer'
 
@@ -87,31 +85,42 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
             denominator += d * expected_count / num_scored_items
 
     return 1.0 - numerator / denominator
+train_result = pd.DataFrame.from_csv("train_result.csv")
+print train_result['Response'].value_counts()
 
-train = pd.DataFrame.from_csv("xgboost_train_probabilities.csv")
+col = list(train_result.columns.values)
+result_ind = list(train_result[col[0]].value_counts().index)
+# train_result = pd.get_dummies(train_result)
+train_result = np.array(train_result).ravel()
+train_result_xgb = train_result - 1
+# print train_result_xgb
+
+train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
+train.fillna(0)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
+test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
+test.fillna(9999)
+test_arr = np.array(test)
 
-train_result = pd.DataFrame.from_csv("train_result.csv")
-# print train_result['Response'].value_counts()
-train_result = np.array(train_result).ravel()
+
 # print train_result.shape[1], ' categorial'
 print train.shape[1], ' columns'
 
 # Standardizing
 stding = StandardScaler()
-train_arr = stding.fit_transform(train_arr)
+train = stding.fit_transform(train_arr)
+test = stding.transform(test_arr)
 
-best_metric = 0
+best_metric = 10
 best_params = []
-
-param_grid = {'n_estimators': [400], 'max_depth': [3, 5, 7], 'max_features': [1.0],
-              'fit_const': [0.4, 0.5, 0.6], 'learning_rate': [0.03], 'subsample': [0.5, 0.75, 1]}
+param_grid = {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.1],
+              'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [50], 'fit_const': [0.5],
+              'subsample': [0.7]}
 
 for params in ParameterGrid(param_grid):
-    regressor = GradientBoostingRegressor(n_estimators=params['n_estimators'], max_depth=params['max_depth'],
-                                          max_features=params['max_features'], learning_rate=params['learning_rate'])
+    print params
     print 'start CV'
     print params
     # CV
@@ -123,42 +132,54 @@ for params in ParameterGrid(param_grid):
         X_train, X_test = train_arr[train_index, :], train_arr[test_index, :]
         y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
         # train machine learning
-        regressor.fit(X_train, y_train)
+        # train machine learning
+        xg_train = xgboost.DMatrix(X_train, label=y_train)
+        xg_test = xgboost.DMatrix(X_test, label=y_test)
+
+        watchlist = [(xg_train, 'train'), (xg_test, 'test')]
+
+        num_round = params['num_round']
+        xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
 
         # predict
-        class_pred = regressor.predict(X_test)
-        class_pred += params['fit_const']
-        class_pred = np.floor(class_pred)
-        # evaluate
-        # print mean_squared_error(y_test, class_pred)
-        metric.append(quadratic_weighted_kappa(y_test, class_pred))
-        # print np.hstack((y_test.reshape(y_test.shape[0], 1), class_pred.reshape(y_test.shape[0], 1)))
+        predicted_results = xgclassifier.predict(xg_test)
+        predicted_results += 1
+        predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
+        predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
+
+        predicted_results += params['fit_const']
+        predicted_results = np.floor(predicted_results).astype('int')
+        print quadratic_weighted_kappa(y_test, predicted_results)
+        metric.append(quadratic_weighted_kappa(y_test, predicted_results))
+
     print 'The quadratic weighted kappa is: ', np.mean(metric)
     if np.mean(metric) > best_metric:
         best_metric = np.mean(metric)
         best_params = params
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-# The best metric is:  3.31904137794 for the params:  {'max_features': 0.75, 'n_estimators': 200, 'learning_rate': 0.03, 'max_depth': 4}
+# train machine learning
+xg_train = xgboost.DMatrix(train, label=train_result_xgb)
+xg_test = xgboost.DMatrix(test)
 
-print 'training test file'
-test = pd.DataFrame.from_csv("xgboost_test_probabilities.csv")
-test_arr = np.array(test)
-test_arr = stding.transform(test_arr)
+watchlist = [(xg_train, 'train')]
 
-regressor = GradientBoostingRegressor(n_estimators=best_params['n_estimators'], max_depth=best_params['max_depth'],
-                                      max_features=best_params['max_features'],
-                                      learning_rate=best_params['learning_rate'])
-regressor.fit(train_arr, train_result)
-reg_pred = regressor.predict(test_arr)
+num_round = params['num_round']
+xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
-reg_pred += best_params['fit_const']
-reg_pred = np.floor(reg_pred).astype('int')
+# predict
+predicted_results = xgclassifier.predict(xg_test)
+predicted_results += 1
+predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
+predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
+
+predicted_results += params['fit_const']
+predicted_results = np.floor(predicted_results).astype('int')
 
 print 'writing to file'
 submission_file = pd.DataFrame.from_csv("sample_submission.csv")
-submission_file['Response'] = reg_pred
+submission_file['Response'] = predicted_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("xgboost_v2_reg_%sdepth.csv" % params['max_depth'])
+submission_file.to_csv("xgboost_%sdepth_regression.csv" % params['max_depth'])
