@@ -49,6 +49,7 @@ for params in ParameterGrid(param_grid):
     kf = StratifiedKFold(np.array(train_result).ravel(), n_folds=cv_n, shuffle=True)
     metric = []
     meta_estimator_xgboost = np.zeros((train_arr.shape[0], 8))
+    best_meta_estimator_xgboost = np.zeros((train_arr.shape[0], 8))
     for train_index, test_index in kf:
         X_train, X_test = train_arr[train_index, :], train_arr[test_index, :]
         y_train, y_test = train_result_xgb[train_index].ravel(), train_result_xgb[test_index].ravel()
@@ -76,10 +77,11 @@ for params in ParameterGrid(param_grid):
     if metric < best_metric:
         best_metric = metric
         best_params = params
+        best_meta_estimator_xgboost = meta_estimator_xgboost
     print 'The best metric is:', best_metric, 'for the params:', best_params
 
-    meta_estimator_xgboost = pd.DataFrame(meta_estimator_xgboost)
-    meta_estimator_xgboost.to_csv('xgboost_train_7_probabilities.csv')
+    best_meta_estimator_xgboost = pd.DataFrame(best_meta_estimator_xgboost)
+    best_meta_estimator_xgboost.to_csv('xgboost_train_probabilities.csv')
 
 
     # train machine learning
@@ -89,12 +91,12 @@ for params in ParameterGrid(param_grid):
     watchlist = [(xg_train, 'train')]
 
     num_round = params['num_round']
-    xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
+    xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
     # predict
     predicted_results = xgclassifier.predict(xg_test)
     predicted_results = predicted_results.reshape(test.shape[0], 8)
 
     predicted_results = pd.DataFrame(predicted_results)
-    predicted_results.to_csv('xgboost_test_7_probabilities.csv')
+    predicted_results.to_csv('xgboost_test_probabilities.csv')
 

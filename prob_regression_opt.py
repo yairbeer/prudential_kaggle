@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import GradientBoostingRegressor
+import matplotlib.pyplot as plt
 
 __author__ = 'YBeer'
 
@@ -14,9 +15,8 @@ col_list = list(train.columns.values)
 
 
 train_result = pd.DataFrame.from_csv("train_result.csv")
-print train_result['Response'].value_counts()
+# print train_result['Response'].value_counts()
 train_result = np.array(train_result).ravel()
-print train_result
 # print train_result.shape[1], ' categorial'
 print train.shape[1], ' columns'
 
@@ -27,17 +27,15 @@ train_arr = stding.fit_transform(train_arr)
 best_metric = 10
 best_params = []
 
-param_grid = {'n_estimators': [200], 'max_depth': [4], 'max_features': [0.75], 'fit_const': [0.3, 0.4, 0.5],
-              'learning_rate': [0.03]}
+param_grid = {'n_estimators': [400], 'max_depth': [3, 4, 5, 6, 7], 'max_features': [0.75], 'fit_const': [0.5],
+              'learning_rate': [0.03], 'subsample': [1.0, 0.9, 0.8, 0.7]}
 
 for params in ParameterGrid(param_grid):
-    print params
-
     regressor = GradientBoostingRegressor(n_estimators=params['n_estimators'], max_depth=params['max_depth'],
                                           max_features=params['max_features'], learning_rate=params['learning_rate'])
 
     print 'start CV'
-
+    print params
     # CV
     cv_n = 4
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
