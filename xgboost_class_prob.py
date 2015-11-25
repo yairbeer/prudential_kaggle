@@ -31,8 +31,8 @@ print train.shape[1], ' columns'
 best_metric = 10
 best_params = []
 param_grid = {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.1],
-              'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [300],
-              'subsample': [0.75]}
+              'objective': ['multi:softprob'], 'max_depth': [3, 5, 7], 'num_round': [400],
+              'subsample': [0.5, 0.75, 1]}
 
 for params in ParameterGrid(param_grid):
     print params
@@ -45,7 +45,7 @@ for params in ParameterGrid(param_grid):
     print 'start CV'
 
     # CV
-    cv_n = 8
+    cv_n = 2
     kf = StratifiedKFold(np.array(train_result).ravel(), n_folds=cv_n, shuffle=True)
     metric = []
     meta_estimator_xgboost = np.zeros((train_arr.shape[0], 8))
@@ -78,25 +78,25 @@ for params in ParameterGrid(param_grid):
         best_metric = metric
         best_params = params
         best_meta_estimator_xgboost = meta_estimator_xgboost
-    print 'The best metric is:', best_metric, 'for the params:', best_params
+print 'The best metric is:', best_metric, 'for the params:', best_params
 
-    best_meta_estimator_xgboost = pd.DataFrame(best_meta_estimator_xgboost)
-    best_meta_estimator_xgboost.to_csv('xgboost_train_probabilities.csv')
+best_meta_estimator_xgboost = pd.DataFrame(best_meta_estimator_xgboost)
+best_meta_estimator_xgboost.to_csv('xgboost_train_probabilities.csv')
 
 
-    # train machine learning
-    xg_train = xgboost.DMatrix(train_arr, label=train_result_xgb)
-    xg_test = xgboost.DMatrix(test_arr)
+# train machine learning
+xg_train = xgboost.DMatrix(train_arr, label=train_result_xgb)
+xg_test = xgboost.DMatrix(test_arr)
 
-    watchlist = [(xg_train, 'train')]
+watchlist = [(xg_train, 'train')]
 
-    num_round = params['num_round']
-    xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
+num_round = params['num_round']
+xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
-    # predict
-    predicted_results = xgclassifier.predict(xg_test)
-    predicted_results = predicted_results.reshape(test.shape[0], 8)
+# predict
+predicted_results = xgclassifier.predict(xg_test)
+predicted_results = predicted_results.reshape(test.shape[0], 8)
 
-    predicted_results = pd.DataFrame(predicted_results)
-    predicted_results.to_csv('xgboost_test_probabilities.csv')
+predicted_results = pd.DataFrame(predicted_results)
+predicted_results.to_csv('xgboost_test_probabilities.csv')
 
