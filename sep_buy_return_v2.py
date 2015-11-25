@@ -101,8 +101,8 @@ trainset = trainset.drop('Medical_History_2', axis=1)
 # trainset[need_dummying] = trainset[need_dummying].astype(str)
 n = trainset.shape[0]
 
-sparsity = 0.95
-sparsity = n * (1 - sparsity)
+# sparsity = 0.95
+# sparsity = n * (1 - sparsity)
 
 print 'dummy train variables'
 dummies = []
@@ -127,13 +127,12 @@ test_p_info2_dummy = dummy_2d(testset, 'Product_Info_2')
 testset = testset.drop('Product_Info_2', axis=1)
 
 test_m_history2_dummy = dummy_num(testset, 'Medical_History_2')
-testset = trainset.drop('Medical_History_2', axis=1)
+testset = testset.drop('Medical_History_2', axis=1)
 
 # testset[need_dummying] = testset[need_dummying].astype(str)
 n_test = testset.shape[0]
 
-sparsity = 0.95
-sparsity = n_test * (1 - sparsity)
+# sparsity = n_test * (1 - sparsity)
 
 print 'dummy test variables'
 dummies = []
