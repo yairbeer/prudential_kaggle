@@ -25,19 +25,21 @@ def remove_sparse(dataset, n_valid_samples):
 
 def dummy_2d(dataset, column):
     print '2d dummying %s' % column
+    index = dataset.index
     dataset = list(dataset[column].astype('str'))
     dataset_1 = map(lambda x: x[0], dataset)
     dataset_2 = map(lambda x: x[1], dataset)
     dataset_1 = np.array(dataset_1).reshape((len(dataset_1), 1))
     dataset_2 = np.array(dataset_2).reshape((len(dataset_2), 1))
     dataset = pd.get_dummies(pd.DataFrame(np.hstack((dataset_1, dataset_2))))
+    dataset.index = index
     dataset = add_prefix(dataset, column)
-    print dataset
     return dataset
 
 
 def dummy_num(dataset, column):
     print 'num dummying %s' % column
+    index = dataset.index
     dataset = list(dataset[column].astype('str'))
     # Find max digits
     n_dig = 0
@@ -54,8 +56,8 @@ def dummy_num(dataset, column):
         dataset_digits.append(map(lambda x: x[i], dataset))
         dataset_digits[i] = np.array(dataset_digits[i]).reshape((len(dataset_digits[i]), 1))
     dataset = pd.get_dummies(pd.DataFrame(np.hstack(tuple(dataset_digits))))
+    dataset.index = index
     dataset = add_prefix(dataset, column)
-    print dataset
     return dataset
 
 
@@ -81,7 +83,7 @@ need_dummying = ['Product_Info_1', 'Product_Info_3', 'Product_Info_5', 'Product_
 # preprocess test data
 print 'read train data'
 trainset = pd.DataFrame.from_csv('train.csv', index_col=0)
-
+print trainset
 train_result = trainset['Response']
 # print train_result.value_counts()
 # train_result.to_csv("train_result.csv")
@@ -111,10 +113,12 @@ for var in need_dummying:
     print trainset[var].value_counts()
     dummy_col = pd.get_dummies(trainset[var])
     add_prefix(dummy_col, var + '_')
+    dummy_col.index = trainset.index
     dummies.append(dummy_col)
     trainset = trainset.drop(var, axis=1)
 
 train = pd.concat([trainset, train_p_info2_dummy, train_m_history2_dummy] + dummies, axis=1)
+print train
 # train = remove_sparse(train, sparsity * 0.25)
 
 # preprocess test data
@@ -140,10 +144,12 @@ for var in need_dummying:
     print 'dummyfing testset %s' % var
     dummy_col = pd.get_dummies(testset[var])
     add_prefix(dummy_col, var + '_')
+    dummy_col.index = testset.index
     dummies.append(dummy_col)
     testset = testset.drop(var, axis=1)
 
-test = pd.concat([testset] + dummies, axis=1)
+test = pd.concat([testset, test_p_info2_dummy, test_m_history2_dummy] + dummies, axis=1)
+print test
 # test = remove_sparse(test, sparsity * 0.25)
 
 # Find common coloumns
