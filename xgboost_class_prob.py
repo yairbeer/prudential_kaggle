@@ -13,12 +13,12 @@ train_result = pd.DataFrame.from_csv("train_result.csv")
 train_result_xgb = np.array(train_result['Response'] - 1)
 # print train_result_xgb
 
-train = pd.DataFrame.from_csv("train_dummied.csv")
+train = pd.DataFrame.from_csv("train_dummied_v2.csv")
 train.fillna(9999)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
-test = pd.DataFrame.from_csv("test_dummied.csv")
+test = pd.DataFrame.from_csv("test_dummied_v2.csv")
 test.fillna(9999)
 test_arr = np.array(test)
 
