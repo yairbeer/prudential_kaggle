@@ -112,10 +112,21 @@ test = stding.transform(test_arr)
 
 best_metric = 0
 best_params = []
-param_grid = {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-              'objective': ['reg:linear'], 'max_depth': [4, 5, 6], 'num_round': [350, 500, 650], 'fit_const': [0.5],
-              'subsample': [0.7]}
+param_grid = [{'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [3], 'num_round': [1500], 'fit_const': [0.5],
+               'subsample': [0.5, 0.75, 1]},
+              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [5], 'num_round': [1000], 'fit_const': [0.5],
+               'subsample': [0.5, 0.75, 1]},
+              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [700], 'fit_const': [0.5],
+               'subsample': [0.5, 0.75, 1]},
+              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [9], 'num_round': [300], 'fit_const': [0.5],
+               'subsample': [0.5, 0.75, 1]}]
 
+# max_depth = 3, num_round =1500; max_depth = 5, num_round =1000; max_depth = 7, num_round = 700;
+# max_depth = 9, num_round = 300
 for params in ParameterGrid(param_grid):
     print params
     print 'start CV'
@@ -144,9 +155,9 @@ for params in ParameterGrid(param_grid):
         predicted_results = np.floor(predicted_results).astype('int')
         predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
         predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-        print pd.Series(predicted_results).value_counts()
-        print pd.Series(y_test).value_counts()
-        print quadratic_weighted_kappa(y_test, predicted_results)
+        # print pd.Series(predicted_results).value_counts()
+        # print pd.Series(y_test).value_counts()
+        # print quadratic_weighted_kappa(y_test, predicted_results)
         metric.append(quadratic_weighted_kappa(y_test, predicted_results))
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
