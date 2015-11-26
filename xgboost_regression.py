@@ -90,7 +90,10 @@ print train_result['Response'].value_counts()
 
 
 def ranking(predictions, split_index):
+    # split_index[0] = 0
     ranked_predictions = np.ones(predictions.shape) * np.nan
+    ranked_predictions = (predictions < split_index[0]) * 1 + \
+                         (ranked_predictions >= split_index[0]) * np.nan
     for i in range(1, split_index):
         ranked_predictions = (split_index[i-1] < predictions < split_index[i]) * (i + 1) + \
                              (ranked_predictions >= split_index[i]) * np.nan
@@ -127,9 +130,14 @@ param_grid = [
               # {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
               #  'objective': ['reg:linear'], 'max_depth': [5], 'num_round': [1000], 'fit_const': [0.5],
               #  'subsample': [0.5, 0.75, 1]},
-              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [700], 'fit_const': [0.5],
-               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [4],
+               'eval_metric': ['rmse'],
+               'eta': [0.03],
+               'objective': ['reg:linear'],
+               'max_depth': [6, 7, 8],
+               'num_round': [700, 850],
+               'fit_const': [0.4, 0.5, 0.6],
+               'subsample': [0.65, 0.75, 0.85]},
               # {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
               #  'objective': ['reg:linear'], 'max_depth': [9], 'num_round': [300], 'fit_const': [0.5],
               #  'subsample': [0.5, 0.75, 1]}
@@ -199,3 +207,5 @@ submission_file['Response'] = predicted_results
 print submission_file['Response'].value_counts()
 
 submission_file.to_csv("xgboost_%sdepth_regression.csv" % best_params['max_depth'])
+
+# The best metric is:  0.617865040155 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.5, 'max_depth': 7}

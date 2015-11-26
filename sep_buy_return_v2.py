@@ -90,26 +90,40 @@ train_result = trainset['Response']
 
 trainset_cols = list(trainset.columns.values)
 trainset = trainset.drop('Response', axis=1)
-
 trainset = trainset.fillna('9999')
+
+# preprocess test data
+print 'read test data'
+testset = pd.DataFrame.from_csv('test.csv', index_col=0)
+testset = testset.fillna('9999')
+
 
 # special dummies
 train_p_info2_dummy = dummy_2d(trainset, 'Product_Info_2')
 trainset = trainset.drop('Product_Info_2', axis=1)
+test_p_info2_dummy = dummy_2d(testset, 'Product_Info_2')
+testset = testset.drop('Product_Info_2', axis=1)
 
 train_m_history2_dummy = dummy_num(trainset, 'Medical_History_2')
 trainset = trainset.drop('Medical_History_2', axis=1)
+test_m_history2_dummy = dummy_num(testset, 'Medical_History_2')
+testset = testset.drop('Medical_History_2', axis=1)
 
 # trainset[need_dummying] = trainset[need_dummying].astype(str)
 n = trainset.shape[0]
+# testset[need_dummying] = testset[need_dummying].astype(str)
+n_test = testset.shape[0]
 
 # sparsity = 0.95
 # sparsity = n * (1 - sparsity)
+# sparsity = n_test * (1 - sparsity)
 
-print 'dummy train variables'
+print 'dummy train / test variables'
 dummies = []
+dummies_test = []
 for var in need_dummying:
-    print 'dummyfing trainset %s' % var
+    print 'dummyfing %s' % var
+
     print trainset[var].value_counts()
     dummy_col = pd.get_dummies(trainset[var])
     add_prefix(dummy_col, var + '_')
@@ -117,39 +131,17 @@ for var in need_dummying:
     dummies.append(dummy_col)
     trainset = trainset.drop(var, axis=1)
 
-train = pd.concat([trainset, train_p_info2_dummy, train_m_history2_dummy] + dummies, axis=1)
-print train
-# train = remove_sparse(train, sparsity * 0.25)
-
-# preprocess test data
-print 'read test data'
-testset = pd.DataFrame.from_csv('test.csv', index_col=0)
-testset = testset.fillna('9999')
-
-# special dummies
-test_p_info2_dummy = dummy_2d(testset, 'Product_Info_2')
-testset = testset.drop('Product_Info_2', axis=1)
-
-test_m_history2_dummy = dummy_num(testset, 'Medical_History_2')
-testset = testset.drop('Medical_History_2', axis=1)
-
-# testset[need_dummying] = testset[need_dummying].astype(str)
-n_test = testset.shape[0]
-
-# sparsity = n_test * (1 - sparsity)
-
-print 'dummy test variables'
-dummies = []
-for var in need_dummying:
-    print 'dummyfing testset %s' % var
+    print testset[var].value_counts()
     dummy_col = pd.get_dummies(testset[var])
     add_prefix(dummy_col, var + '_')
     dummy_col.index = testset.index
-    dummies.append(dummy_col)
+    dummies_test.append(dummy_col)
     testset = testset.drop(var, axis=1)
 
-test = pd.concat([testset, test_p_info2_dummy, test_m_history2_dummy] + dummies, axis=1)
-print test
+train = pd.concat([trainset, train_p_info2_dummy, train_m_history2_dummy] + dummies, axis=1)
+# train = remove_sparse(train, sparsity * 0.25)
+
+test = pd.concat([testset, test_p_info2_dummy, test_m_history2_dummy] + dummies_test, axis=1)
 # test = remove_sparse(test, sparsity * 0.25)
 
 # Find common coloumns
@@ -168,5 +160,5 @@ train = train[col_common]
 test = test[col_common]
 
 print 'write to data'
-train.to_csv("train_dummied_v2.csv")
-test.to_csv("test_dummied_v2.csv")
+# train.to_csv("train_dummied_v2.csv")
+# test.to_csv("test_dummied_v2.csv")
