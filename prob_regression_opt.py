@@ -91,9 +91,9 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
 
 def split(X_train, y_train, n_class, batches):
     partition = np.arange(n_class-1) + 1.5
-    for
+    # for
     metric_calc = np.zeros((batches,))
-    return splitted_data
+    return metric_calc
 
 train = pd.DataFrame.from_csv("xgboost_train_probabilities.csv")
 train_arr = np.array(train)

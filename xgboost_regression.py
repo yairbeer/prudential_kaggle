@@ -88,6 +88,13 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
 train_result = pd.DataFrame.from_csv("train_result.csv")
 print train_result['Response'].value_counts()
 
+
+def split(X_train, y_train, n_class, batches):
+    partition = np.arange(n_class-1) + 1.5
+    # for
+    metric_calc = np.zeros((batches,))
+    return metric_calc
+
 col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
@@ -112,23 +119,24 @@ test = stding.transform(test_arr)
 
 best_metric = 0
 best_params = []
-param_grid = [{'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [3], 'num_round': [1500], 'fit_const': [0.5],
-               'subsample': [0.5, 0.75, 1]},
-              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [5], 'num_round': [1000], 'fit_const': [0.5],
-               'subsample': [0.5, 0.75, 1]},
+param_grid = [
+              # {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+              #  'objective': ['reg:linear'], 'max_depth': [3], 'num_round': [1500], 'fit_const': [0.5],
+              #  'subsample': [0.5, 0.75, 1]},
+              # {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+              #  'objective': ['reg:linear'], 'max_depth': [5], 'num_round': [1000], 'fit_const': [0.5],
+              #  'subsample': [0.5, 0.75, 1]},
               {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
                'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [700], 'fit_const': [0.5],
-               'subsample': [0.5, 0.75, 1]},
-              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [9], 'num_round': [300], 'fit_const': [0.5],
-               'subsample': [0.5, 0.75, 1]}]
+               'subsample': [0.75]},
+              # {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+              #  'objective': ['reg:linear'], 'max_depth': [9], 'num_round': [300], 'fit_const': [0.5],
+              #  'subsample': [0.5, 0.75, 1]}
+             ]
 
 # max_depth = 3, num_round =1500; max_depth = 5, num_round =1000; max_depth = 7, num_round = 700;
 # max_depth = 9, num_round = 300
 for params in ParameterGrid(param_grid):
-    print params
     print 'start CV'
     print params
     # CV
@@ -167,17 +175,17 @@ for params in ParameterGrid(param_grid):
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
 # train machine learning
-xg_train = xgboost.DMatrix(train, label=train_result)
-xg_test = xgboost.DMatrix(test)
+xg_train = xgboost.DMatrix(train_arr, label=train_result)
+xg_test = xgboost.DMatrix(test_arr)
 
 watchlist = [(xg_train, 'train')]
 
-num_round = params['num_round']
+num_round = best_metric['num_round']
 xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-predicted_results += params['fit_const']
+predicted_results += best_metric['fit_const']
 predicted_results = np.floor(predicted_results).astype('int')
 predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
 predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
@@ -189,4 +197,4 @@ submission_file['Response'] = predicted_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("xgboost_%sdepth_regression.csv" % params['max_depth'])
+submission_file.to_csv("xgboost_%sdepth_regression.csv" % best_metric['max_depth'])
