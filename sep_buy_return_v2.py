@@ -34,6 +34,7 @@ def dummy_2d(dataset, column):
     dataset = pd.get_dummies(pd.DataFrame(np.hstack((dataset_1, dataset_2))))
     dataset.index = index
     dataset = add_prefix(dataset, column)
+    # print dataset
     return dataset
 
 
@@ -58,6 +59,7 @@ def dummy_num(dataset, column):
     dataset = pd.get_dummies(pd.DataFrame(np.hstack(tuple(dataset_digits))))
     dataset.index = index
     dataset = add_prefix(dataset, column)
+    # print dataset
     return dataset
 
 
@@ -83,8 +85,8 @@ need_dummying = ['Product_Info_1', 'Product_Info_3', 'Product_Info_5', 'Product_
 # preprocess test data
 print 'read train data'
 trainset = pd.DataFrame.from_csv('train.csv', index_col=0)
-print trainset
 train_result = trainset['Response']
+
 # print train_result.value_counts()
 # train_result.to_csv("train_result.csv")
 
@@ -118,6 +120,7 @@ n_test = testset.shape[0]
 # sparsity = n * (1 - sparsity)
 # sparsity = n_test * (1 - sparsity)
 
+# Plotting
 print 'dummy train / test variables'
 dummies = []
 dummies_test = []
