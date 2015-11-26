@@ -104,12 +104,12 @@ result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
 train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
-train.fillna(9999)
+train.fillna(999)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
 test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
-test.fillna(9999)
+test.fillna(999)
 test_arr = np.array(test)
 
 

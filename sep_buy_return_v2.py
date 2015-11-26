@@ -92,12 +92,12 @@ train_result = trainset['Response']
 
 trainset_cols = list(trainset.columns.values)
 trainset = trainset.drop('Response', axis=1)
-trainset = trainset.fillna('9999')
+trainset = trainset.fillna('999')
 
 # preprocess test data
 print 'read test data'
 testset = pd.DataFrame.from_csv('test.csv', index_col=0)
-testset = testset.fillna('9999')
+testset = testset.fillna('999')
 
 
 # special dummies
@@ -121,6 +121,7 @@ n_test = testset.shape[0]
 # sparsity = n_test * (1 - sparsity)
 
 # Plotting
+
 print 'dummy train / test variables'
 dummies = []
 dummies_test = []
