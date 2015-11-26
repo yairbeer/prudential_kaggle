@@ -89,11 +89,12 @@ train_result = pd.DataFrame.from_csv("train_result.csv")
 print train_result['Response'].value_counts()
 
 
-def split(X_train, y_train, n_class, batches):
-    partition = np.arange(n_class-1) + 1.5
-    # for
-    metric_calc = np.zeros((batches,))
-    return metric_calc
+def ranking(predictions, split_index):
+    ranked_predictions = np.ones(predictions.shape) * np.nan
+    for i in range(1, split_index):
+        ranked_predictions = (split_index[i-1] < predictions < split_index[i]) * (i + 1) + \
+                             (ranked_predictions >= split_index[i]) * np.nan
+    return ranked_predictions
 
 col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
@@ -180,12 +181,12 @@ xg_test = xgboost.DMatrix(test_arr)
 
 watchlist = [(xg_train, 'train')]
 
-num_round = best_metric['num_round']
+num_round = best_params['num_round']
 xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-predicted_results += best_metric['fit_const']
+predicted_results += best_params['fit_const']
 predicted_results = np.floor(predicted_results).astype('int')
 predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
 predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
@@ -197,4 +198,4 @@ submission_file['Response'] = predicted_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("xgboost_%sdepth_regression.csv" % best_metric['max_depth'])
+submission_file.to_csv("xgboost_%sdepth_regression.csv" % best_params['max_depth'])
