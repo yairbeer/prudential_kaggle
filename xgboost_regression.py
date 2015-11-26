@@ -90,13 +90,10 @@ print train_result['Response'].value_counts()
 
 col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
-# train_result = pd.get_dummies(train_result)
 train_result = np.array(train_result).ravel()
-train_result_xgb = train_result - 1
-# print train_result_xgb
 
 train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
-train.fillna(0)
+train.fillna(9999)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
@@ -113,10 +110,10 @@ stding = StandardScaler()
 train = stding.fit_transform(train_arr)
 test = stding.transform(test_arr)
 
-best_metric = 10
+best_metric = 0
 best_params = []
-param_grid = {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.1],
-              'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [50], 'fit_const': [0.5],
+param_grid = {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+              'objective': ['reg:linear'], 'max_depth': [4, 5, 6], 'num_round': [350, 500, 650], 'fit_const': [0.5],
               'subsample': [0.7]}
 
 for params in ParameterGrid(param_grid):
@@ -124,7 +121,7 @@ for params in ParameterGrid(param_grid):
     print 'start CV'
     print params
     # CV
-    cv_n = 7
+    cv_n = 8
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
     metric = []
@@ -143,12 +140,12 @@ for params in ParameterGrid(param_grid):
 
         # predict
         predicted_results = xgclassifier.predict(xg_test)
-        predicted_results += 1
-        predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
-        predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-
         predicted_results += params['fit_const']
         predicted_results = np.floor(predicted_results).astype('int')
+        predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
+        predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
+        print pd.Series(predicted_results).value_counts()
+        print pd.Series(y_test).value_counts()
         print quadratic_weighted_kappa(y_test, predicted_results)
         metric.append(quadratic_weighted_kappa(y_test, predicted_results))
 
@@ -159,7 +156,7 @@ for params in ParameterGrid(param_grid):
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
 # train machine learning
-xg_train = xgboost.DMatrix(train, label=train_result_xgb)
+xg_train = xgboost.DMatrix(train, label=train_result)
 xg_test = xgboost.DMatrix(test)
 
 watchlist = [(xg_train, 'train')]
@@ -169,12 +166,11 @@ xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-predicted_results += 1
-predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
-predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-
 predicted_results += params['fit_const']
 predicted_results = np.floor(predicted_results).astype('int')
+predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
+predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
+print pd.Series(predicted_results).value_counts()
 
 print 'writing to file'
 submission_file = pd.DataFrame.from_csv("sample_submission.csv")

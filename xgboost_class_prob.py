@@ -42,12 +42,10 @@ param_grid = {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['
 for params in ParameterGrid(param_grid):
     print params
 
-
-
     print 'start CV'
 
     # CV
-    cv_n = 7
+    cv_n = 4
     kf = StratifiedKFold(np.array(train_result).ravel(), n_folds=cv_n, shuffle=True)
     metric = []
     meta_estimator_xgboost = np.zeros((train_arr.shape[0], 8))
@@ -101,5 +99,3 @@ predicted_results = predicted_results.reshape(test.shape[0], 8)
 
 predicted_results = pd.DataFrame(predicted_results)
 predicted_results.to_csv('xgboost_test_probabilities.csv')
-
-# beat 1.14

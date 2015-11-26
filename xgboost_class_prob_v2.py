@@ -88,13 +88,6 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
 
     return 1.0 - numerator / denominator
 
-
-def split(X_train, y_train, n_class, batches):
-    partition = np.arange(n_class-1) + 1.5
-    for
-    metric_calc = np.zeros((batches,))
-    return splitted_data
-
 train = pd.DataFrame.from_csv("xgboost_train_probabilities.csv")
 train_arr = np.array(train)
 col_list = list(train.columns.values)
@@ -114,7 +107,7 @@ best_metric = 0
 best_params = []
 
 param_grid = {'n_estimators': [1000], 'max_depth': [5], 'max_features': [1.0],
-              'fit_const': [0.5], 'learning_rate': [0.01, 0.03], 'subsample': [0.75]}
+              'fit_const': [0.5], 'learning_rate': [0.005, 0.01, 0.03], 'subsample': [0.75]}
 
 for params in ParameterGrid(param_grid):
     regressor = GradientBoostingRegressor(n_estimators=params['n_estimators'], max_depth=params['max_depth'],
