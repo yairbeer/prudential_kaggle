@@ -90,13 +90,12 @@ print train_result['Response'].value_counts()
 
 
 def ranking(predictions, split_index):
-    # split_index[0] = 0
-    ranked_predictions = np.ones(predictions.shape) * np.nan
-    ranked_predictions = (predictions < split_index[0]) * 1 + \
-                         (ranked_predictions >= split_index[0]) * np.nan
-    for i in range(1, split_index):
-        ranked_predictions = (split_index[i-1] < predictions < split_index[i]) * (i + 1) + \
-                             (ranked_predictions >= split_index[i]) * np.nan
+    predictions = pd.Series(predictions)
+    ranked_predictions = predictions.copy()
+    ranked_predictions.iloc[predictions < split_index[0]] = 1
+    for i in range(1, (len(split_index) - 1)):
+        ranked_predictions.iloc[split_index[i-1] <= predictions < split_index[i]] = i+1
+    ranked_predictions.iloc[predictions >= split_index[-1]] = len(split_index-1)
     return ranked_predictions
 
 col = list(train_result.columns.values)
@@ -143,7 +142,7 @@ param_grid = [
               #  'subsample': [0.5, 0.75, 1]}
              ]
 
-# max_depth = 3, num_round =1500; max_depth = 5, num_round =1000; max_depth = 7, num_round = 700;
+# max_depth = 3, num_round = 1500; max_depth = 5, num_round = 1000; max_depth = 7, num_round = 700;
 # max_depth = 9, num_round = 300
 for params in ParameterGrid(param_grid):
     print 'start CV'
