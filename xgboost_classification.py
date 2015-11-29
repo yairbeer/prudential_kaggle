@@ -124,13 +124,15 @@ test = stding.transform(test_arr)
 
 param_grid = [
               {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
-               'objective': ['multi:softprob'], 'max_depth': [3, 5, 7, 9, 11], 'num_round': [1500],
-               'subsample': [0.75]
-               }
+               'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [750],
+               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
+               'objective': ['multi:softprob'], 'max_depth': [9], 'num_round': [500],
+               'subsample': [0.75]},
              ]
 
-# max_depth = 3, num_round = 1500; max_depth = 5, num_round = 1000; max_depth = 7, num_round = 700;
-# max_depth = 9, num_round = 300
+# max_depth = 3, num_round = 1600; max_depth = 5, num_round = 1200; max_depth = 7, num_round = 750;
+# max_depth = 9, num_round = 500, max_depth = 11, num_round = 360
 best_metric = 10
 best_params = []
 best_metatrain = 0
@@ -165,7 +167,7 @@ for params in ParameterGrid(param_grid):
         metric.append(log_loss(y_test, predicted_results))
         meta_train[test_index, :] = predicted_results
 
-    print 'The quadratic weighted kappa is: ', np.mean(metric)
+    print 'The log loss is: ', np.mean(metric)
     if np.mean(metric) < best_metric:
         best_metric = np.mean(metric)
         best_params = params
