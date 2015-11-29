@@ -125,17 +125,14 @@ test = stding.transform(test_arr)
 param_grid = [
               {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
                'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [750],
-               'subsample': [0.75]},
-              {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
-               'objective': ['multi:softprob'], 'max_depth': [9], 'num_round': [500],
-               'subsample': [0.75]},
+               'subsample': [0.75]}
              ]
 
 # max_depth = 3, num_round = 1600; max_depth = 5, num_round = 1200; max_depth = 7, num_round = 750;
 # max_depth = 9, num_round = 500, max_depth = 11, num_round = 360
 best_metric = 10
 best_params = []
-best_metatrain = 0
+best_metatrain = None
 print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
@@ -171,7 +168,8 @@ for params in ParameterGrid(param_grid):
     if np.mean(metric) < best_metric:
         best_metric = np.mean(metric)
         best_params = params
-        best_metatrain = meta_train.astype('int')
+        best_metatrain = meta_train
+        print best_metatrain
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
 pd.DataFrame(best_metatrain).to_csv('meta_train_boost_classification.csv')
