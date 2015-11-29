@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import xgboostlib.xgboost as xgboost
 from sklearn.cross_validation import StratifiedKFold
+from sklearn.metrics import log_loss
 
 __author__ = 'YBeer'
 
@@ -85,8 +86,6 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
             denominator += d * expected_count / num_scored_items
 
     return 1.0 - numerator / denominator
-train_result = pd.DataFrame.from_csv("train_result.csv")
-print train_result['Response'].value_counts()
 
 
 def ranking(predictions, split_index):
@@ -98,9 +97,12 @@ def ranking(predictions, split_index):
     ranked_predictions.iloc[predictions >= split_index[-1]] = len(split_index-1)
     return ranked_predictions
 
+train_result = pd.DataFrame.from_csv("train_result.csv")
+print train_result['Response'].value_counts()
+
 col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
-train_result = np.array(train_result).ravel()
+train_result = np.array(train_result).ravel() - 1
 
 train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
 train.fillna(999)
@@ -120,25 +122,18 @@ stding = StandardScaler()
 train = stding.fit_transform(train_arr)
 test = stding.transform(test_arr)
 
-best_metric = 0
-best_params = []
-best_metatrain = 0
 param_grid = [
-              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [700], 'fit_const': [0.5],
-               'subsample': [0.5, 0.75, 1]},
-              # {'silent': [1], 'nthread': [4],
-              #  'eval_metric': ['rmse'],
-              #  'eta': [0.03],
-              #  'objective': ['reg:linear'],
-              #  'max_depth': [8],
-              #  'num_round': [850],
-              #  'fit_const': [0.6],
-              #  'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
+               'objective': ['multi:softprob'], 'max_depth': [3, 5, 7, 9, 11], 'num_round': [1500],
+               'subsample': [0.75]
+               }
              ]
 
 # max_depth = 3, num_round = 1500; max_depth = 5, num_round = 1000; max_depth = 7, num_round = 700;
 # max_depth = 9, num_round = 300
+best_metric = 10
+best_params = []
+best_metatrain = 0
 print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
@@ -146,7 +141,7 @@ for params in ParameterGrid(param_grid):
     cv_n = 8
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
-    meta_train = np.ones((train_arr.shape[0],))
+    meta_train = np.ones((train_arr.shape[0], 8))
     metric = []
     for train_index, test_index in kf:
         X_train, X_test = train_arr[train_index, :], train_arr[test_index, :]
@@ -163,24 +158,21 @@ for params in ParameterGrid(param_grid):
 
         # predict
         predicted_results = xgclassifier.predict(xg_test)
-        predicted_results += params['fit_const']
-        predicted_results = np.floor(predicted_results).astype('int')
-        predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
-        predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
+        predicted_results = predicted_results.reshape(X_test.shape[0], 8)
         # print pd.Series(predicted_results).value_counts()
         # print pd.Series(y_test).value_counts()
         # print quadratic_weighted_kappa(y_test, predicted_results)
-        metric.append(quadratic_weighted_kappa(y_test, predicted_results))
-        meta_train[test_index] = predicted_results
+        metric.append(log_loss(y_test, predicted_results))
+        meta_train[test_index, :] = predicted_results
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
-    if np.mean(metric) > best_metric:
+    if np.mean(metric) < best_metric:
         best_metric = np.mean(metric)
         best_params = params
         best_metatrain = meta_train.astype('int')
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression.csv')
+pd.DataFrame(best_metatrain).to_csv('meta_train_boost_classification.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train_arr, label=train_result)
 xg_test = xgboost.DMatrix(test_arr)
@@ -192,12 +184,8 @@ xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-predicted_results += best_params['fit_const']
-predicted_results = np.floor(predicted_results).astype('int')
-predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
-predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
-print pd.Series(predicted_results).value_counts()
-pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression.csv')
+predicted_results = predicted_results.reshape(test_arr.shape[0], 8)
+pd.DataFrame(predicted_results).to_csv('meta_test_boost_classification.csv')
 
 # print 'writing to file'
 # submission_file = pd.DataFrame.from_csv("sample_submission.csv")
@@ -206,6 +194,3 @@ pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression.csv')
 # print submission_file['Response'].value_counts()
 #
 # submission_file.to_csv("xgboost_%sdepth_regression.csv" % best_params['max_depth'])
-
-# The best metric is:  0.617865040155 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.5, 'max_depth': 7}
-# The best metric is:  0.618949515181 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.6, 'max_depth': 8}
