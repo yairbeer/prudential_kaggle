@@ -104,12 +104,12 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel() - 1
 
-train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
+train = pd.DataFrame.from_csv("train_v2.csv").astype('float')
 train.fillna(999)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
-test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
+test = pd.DataFrame.from_csv("test_v2.csv").astype('float')
 test.fillna(999)
 test_arr = np.array(test)
 
@@ -124,7 +124,7 @@ test = stding.transform(test_arr)
 
 param_grid = [
               {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
-               'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [750],
+               'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [400],
                'subsample': [0.75]}
              ]
 
