@@ -103,12 +103,12 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
+train = pd.DataFrame.from_csv("train_v2.csv").astype('float')
 train.fillna(999)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
-test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
+test = pd.DataFrame.from_csv("test_v2.csv").astype('float')
 test.fillna(999)
 test_arr = np.array(test)
 
@@ -125,17 +125,9 @@ best_metric = 0
 best_params = []
 best_metatrain = 0
 param_grid = [
-              {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [700], 'fit_const': [0.5],
-               'subsample': [0.5, 0.75, 1]},
-              # {'silent': [1], 'nthread': [4],
-              #  'eval_metric': ['rmse'],
-              #  'eta': [0.03],
-              #  'objective': ['reg:linear'],
-              #  'max_depth': [8],
-              #  'num_round': [850],
-              #  'fit_const': [0.6],
-              #  'subsample': [0.75]},
+              {'silent': [1], 'nthread': [2], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [400], 'fit_const': [0.5],
+               'subsample': [0.75]},
              ]
 
 # max_depth = 3, num_round = 1500; max_depth = 5, num_round = 1000; max_depth = 7, num_round = 700;
@@ -181,7 +173,7 @@ for params in ParameterGrid(param_grid):
         best_metatrain = meta_train.astype('int')
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression.csv')
+pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_not_dummied.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train_arr, label=train_result)
 xg_test = xgboost.DMatrix(test_arr)
@@ -198,7 +190,7 @@ predicted_results = np.floor(predicted_results).astype('int')
 predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
 predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
 print pd.Series(predicted_results).value_counts()
-pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression.csv')
+pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_not_dummied.csv')
 
 # print 'writing to file'
 # submission_file = pd.DataFrame.from_csv("sample_submission.csv")
@@ -208,5 +200,8 @@ pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression.csv')
 #
 # submission_file.to_csv("xgboost_%sdepth_regression.csv" % best_params['max_depth'])
 
-# The best metric is:  0.617865040155 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.5, 'max_depth': 7}
+# dummied
 # The best metric is:  0.618949515181 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.6, 'max_depth': 8}
+
+# not dummied
+
