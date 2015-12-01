@@ -123,8 +123,11 @@ print train.shape[1], ' columns'
 best_metric = 0
 best_params = []
 param_grid = {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-              'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [200], 'fit_const': [0.5],
-              'subsample': [0.75]}
+              'objective': ['reg:linear'],
+              'max_depth': [6, 7, 8],
+              'num_round': [150, 200, 250, 300],
+              'fit_const': [0.4, 0.5, 0.6],
+              'subsample': [0.5, 0.75, 1]}
 
 # Standardizing
 stding = StandardScaler()
@@ -136,7 +139,7 @@ for i, params in enumerate(ParameterGrid(param_grid)):
     print i
     print params
     # CV
-    cv_n = 4
+    cv_n = 8
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
     metric = []
     for train_index, test_index in kf:
@@ -191,3 +194,5 @@ submission_file['Response'] = predicted_results
 print submission_file['Response'].value_counts()
 
 submission_file.to_csv("xgboost_ensemble_%sdepth_regression.csv" % best_params['max_depth'])
+
+# class + reg, dum + not dummy
