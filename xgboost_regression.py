@@ -156,24 +156,24 @@ for params in ParameterGrid(param_grid):
 
         # predict
         predicted_results = xgclassifier.predict(xg_test)
+        meta_train[test_index] = predicted_results
         predicted_results += params['fit_const']
         predicted_results = np.floor(predicted_results).astype('int')
         predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
         predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-        # print pd.Series(predicted_results).value_counts()
-        # print pd.Series(y_test).value_counts()
-        # print quadratic_weighted_kappa(y_test, predicted_results)
+        print pd.Series(predicted_results).value_counts()
+        print pd.Series(y_test).value_counts()
+        print quadratic_weighted_kappa(y_test, predicted_results)
         metric.append(quadratic_weighted_kappa(y_test, predicted_results))
-        meta_train[test_index] = predicted_results
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
     if np.mean(metric) > best_metric:
         best_metric = np.mean(metric)
         best_params = params
-        best_metatrain = meta_train.astype('int')
+        best_metatrain = meta_train
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_not_dummied.csv')
+pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_notdum.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train_arr, label=train_result)
 xg_test = xgboost.DMatrix(test_arr)
@@ -185,12 +185,11 @@ xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-predicted_results += best_params['fit_const']
-predicted_results = np.floor(predicted_results).astype('int')
-predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
-predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
-print pd.Series(predicted_results).value_counts()
-pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_not_dummied.csv')
+# predicted_results += best_params['fit_const']
+# predicted_results = np.floor(predicted_results).astype('int')
+# predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
+# predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
+pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_notdum.csv')
 
 # print 'writing to file'
 # submission_file = pd.DataFrame.from_csv("sample_submission.csv")

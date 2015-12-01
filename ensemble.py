@@ -123,7 +123,7 @@ print train.shape[1], ' columns'
 best_metric = 0
 best_params = []
 param_grid = {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
-              'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [150], 'fit_const': [0.5],
+              'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [200], 'fit_const': [0.5],
               'subsample': [0.75]}
 
 # Standardizing

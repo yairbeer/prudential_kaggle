@@ -172,7 +172,7 @@ for params in ParameterGrid(param_grid):
         print best_metatrain
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_classification.csv')
+pd.DataFrame(best_metatrain).to_csv('meta_train_boost_classification_notdum.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train_arr, label=train_result)
 xg_test = xgboost.DMatrix(test_arr)
@@ -185,7 +185,7 @@ xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 # predict
 predicted_results = xgclassifier.predict(xg_test)
 predicted_results = predicted_results.reshape(test_arr.shape[0], 8)
-pd.DataFrame(predicted_results).to_csv('meta_test_boost_classification.csv')
+pd.DataFrame(predicted_results).to_csv('meta_test_boost_classification_notdum.csv')
 
 # print 'writing to file'
 # submission_file = pd.DataFrame.from_csv("sample_submission.csv")
