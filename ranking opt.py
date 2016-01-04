@@ -119,8 +119,8 @@ print quadratic_weighted_kappa(train_result, basecase)
 
 # basecase_naive baseline: -0.00590368902887
 # add constant
-x0_range = np.arange(-0.5, 0.55, 0.05)
-x1_range = np.arange(0.1, 1.35, 0.05)
+x0_range = np.arange(-0.25, 0.3, 0.05)
+x1_range = np.arange(0.7, 1.15, 0.05)
 bestcase = np.array(ranking(train_prediction, base_splitter)).astype('int')
 bestscore = quadratic_weighted_kappa(train_result, basecase)
 
@@ -134,12 +134,14 @@ for x0 in x0_range:
             bestscore = score
             bestcase = case
             print 'For splitter ', (x0 + x1 * base_splitter)
+            print 'Variables x0 = %f, x1 = %f' % (x0, x1)
             print 'The score is %f' % bestscore
 
 # add constant
-x0_range = np.arange(-0.5, 0.55, 0.05)
-x1_range = np.arange(0.1, 1.35, 0.05)
-x2_range = np.arange(-0.5, 0.525, 0.025)
+x0_range = np.arange(0.1, 0.55, 0.05)
+x1_range = np.arange(1, 1.8, 0.05)
+x2_range = np.arange(-0.2, 0.2, 0.025)
+x3_range = np.arange(-0.1, 0.1, 0.01)
 bestcase = np.array(ranking(train_prediction, base_splitter)).astype('int')
 bestscore = quadratic_weighted_kappa(train_result, basecase)
 
@@ -153,13 +155,34 @@ for x0 in x0_range:
             if score > bestscore:
                 bestscore = score
                 bestcase = case
-                print 'For splitter ', (x0 + x1 * base_splitter)
+                print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2)
+                print 'Variables x0 = %f, x1 = %f, x2 = %f' % (x0, x1, x2)
                 print 'The score is %f' % bestscore
 
+bestcase = np.array(ranking(train_prediction, base_splitter)).astype('int')
+bestscore = quadratic_weighted_kappa(train_result, basecase)
+print 'start cubic optimization'
+# optimize classifier
+for x0 in x0_range:
+    for x1 in x1_range:
+        for x2 in x2_range:
+            for x3 in x3_range:
+                case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter + x2 * base_splitter**2 +
+                                                           x3 * base_splitter**3))).astype('int')
+                score = quadratic_weighted_kappa(train_result, case)
+                if score > bestscore:
+                    bestscore = score
+                    bestcase = case
+                    print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2 +
+                                                           x3 * base_splitter**3)
+                    print 'Variables x0 = %f, x1 = %f, x2 = %f' % (x0, x1, x2)
+                    print 'The score is %f' % bestscore
 # quad
-# For splitter  [ 1.5   2.25  2.8   3.15  3.3   3.25  3.  ]
-# The score is -0.006518
+# For splitter  [ 2.28125  3.38125  4.33125  5.13125  5.78125  6.28125  6.63125]
+# Variables x0 = 0.350000, x1 = 1.400000, x2 = -0.075000
+# The score is 0.655544
 
 # lin
 # For splitter  [ 1.85  2.75  3.65  4.55  5.45  6.35  7.25]
+# Variables x0 = 0.500000, x1 = 0.900000
 # The score is 0.632679

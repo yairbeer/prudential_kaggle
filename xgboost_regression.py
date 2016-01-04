@@ -129,9 +129,10 @@ best_metric = 0
 best_params = []
 best_metatrain = 0
 
-# Linear best
-splitter = [1.85, 2.75, 3.65, 4.55, 5.45, 6.35, 7.25]
+# # Linear best
+# splitter = [1.85, 2.75, 3.65, 4.55, 5.45, 6.35, 7.25]
 # Quadratic best
+splitter = [2.28125, 3.38125, 4.33125, 5.13125, 5.78125, 6.28125, 6.63125]
 
 param_grid = [
               {'silent': [1], 'nthread': [2], 'eval_metric': ['rmse'], 'eta': [0.03],
@@ -141,7 +142,7 @@ param_grid = [
 
 # max_depth = 3, num_round = 1500; max_depth = 5, num_round = 1000; max_depth = 7, num_round = 700;
 # max_depth = 9, num_round = 300
-print 'start CV'
+# print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
     # CV
@@ -174,7 +175,7 @@ for params in ParameterGrid(param_grid):
         print pd.Series(y_test).value_counts()
         print quadratic_weighted_kappa(y_test, classified_predicted_results)
         print quadratic_weighted_kappa(y_test, predicted_results)
-        metric.append(quadratic_weighted_kappa(y_test, predicted_results))
+        metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
     if np.mean(metric) > best_metric:
@@ -195,10 +196,6 @@ xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-# predicted_results += best_params['fit_const']
-# predicted_results = np.floor(predicted_results).astype('int')
-# predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
-# predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
 pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_dum.csv')
 
 # print 'writing to file'
@@ -207,11 +204,24 @@ submission_file = pd.DataFrame.from_csv("sample_submission.csv")
 submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
+predicted_results += best_params['fit_const']
+predicted_results = np.floor(predicted_results).astype('int')
+predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
+predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
+print pd.Series(predicted_results).value_counts()
 
-submission_file.to_csv("xgboost_%sdepth_regression_lin_opt_splitter.csv" % best_params['max_depth'])
+submission_file.to_csv("xgboost_%sdepth_regression_opt_quad_splitter.csv" % best_params['max_depth'])
 
 # dummied
 # The best metric is:  0.618949515181 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.6, 'max_depth': 8}
-
+# The best metric with linear optimization is:  0.618949515181 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.6, 'max_depth': 8}
+# 7    5261
+# 6    4281
+# 5    3253
+# 8    2183
+# 4    2158
+# 3    1510
+# 2     854
+# 1     265
 # not dummied
 
