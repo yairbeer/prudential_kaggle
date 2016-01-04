@@ -88,12 +88,16 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
 
 
 def ranking(predictions, split_index):
-    predictions = pd.Series(predictions)
-    ranked_predictions = predictions.copy()
-    ranked_predictions.iloc[predictions < split_index[0]] = 1
-    for i in range(1, (len(split_index) - 1)):
-        ranked_predictions.iloc[split_index[i-1] <= predictions < split_index[i]] = i+1
-    ranked_predictions.iloc[predictions >= split_index[-1]] = len(split_index-1)
+    # print predictions
+    ranked_predictions = np.ones(predictions.shape)
+
+    for i in range(1, len(split_index)):
+        cond = (split_index[i-1] <= predictions) * 1 * (predictions < split_index[i])
+        ranked_predictions[cond.astype('bool')] = i+1
+    cond = (predictions >= split_index[-1])
+    ranked_predictions[cond] = len(split_index) + 1
+    # print cond
+    # print ranked_predictions
     return ranked_predictions
 
 train_result = pd.DataFrame.from_csv("train_result.csv")
@@ -103,12 +107,12 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-train = pd.DataFrame.from_csv("train_v2.csv").astype('float')
+train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
 train.fillna(999)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
-test = pd.DataFrame.from_csv("test_v2.csv").astype('float')
+test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
 test.fillna(999)
 test_arr = np.array(test)
 
@@ -124,9 +128,14 @@ test = stding.transform(test_arr)
 best_metric = 0
 best_params = []
 best_metatrain = 0
+
+# Linear best
+splitter = [1.85, 2.75, 3.65, 4.55, 5.45, 6.35, 7.25]
+# Quadratic best
+
 param_grid = [
               {'silent': [1], 'nthread': [2], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [400], 'fit_const': [0.5],
+               'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [750], 'fit_const': [0.5],
                'subsample': [0.75]},
              ]
 
@@ -145,7 +154,6 @@ for params in ParameterGrid(param_grid):
         X_train, X_test = train_arr[train_index, :], train_arr[test_index, :]
         y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
         # train machine learning
-        # train machine learning
         xg_train = xgboost.DMatrix(X_train, label=y_train)
         xg_test = xgboost.DMatrix(X_test, label=y_test)
 
@@ -157,12 +165,14 @@ for params in ParameterGrid(param_grid):
         # predict
         predicted_results = xgclassifier.predict(xg_test)
         meta_train[test_index] = predicted_results
+        classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
         predicted_results += params['fit_const']
         predicted_results = np.floor(predicted_results).astype('int')
         predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
         predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
         print pd.Series(predicted_results).value_counts()
         print pd.Series(y_test).value_counts()
+        print quadratic_weighted_kappa(y_test, classified_predicted_results)
         print quadratic_weighted_kappa(y_test, predicted_results)
         metric.append(quadratic_weighted_kappa(y_test, predicted_results))
 
@@ -173,7 +183,7 @@ for params in ParameterGrid(param_grid):
         best_metatrain = meta_train
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_notdum.csv')
+pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_dum.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train_arr, label=train_result)
 xg_test = xgboost.DMatrix(test_arr)
@@ -189,15 +199,16 @@ predicted_results = xgclassifier.predict(xg_test)
 # predicted_results = np.floor(predicted_results).astype('int')
 # predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
 # predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
-pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_notdum.csv')
+pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_dum.csv')
 
 # print 'writing to file'
-# submission_file = pd.DataFrame.from_csv("sample_submission.csv")
-# submission_file['Response'] = predicted_results
-#
-# print submission_file['Response'].value_counts()
-#
-# submission_file.to_csv("xgboost_%sdepth_regression.csv" % best_params['max_depth'])
+classed_results = np.array(ranking(predicted_results, splitter)).astype('int')
+submission_file = pd.DataFrame.from_csv("sample_submission.csv")
+submission_file['Response'] = classed_results
+
+print submission_file['Response'].value_counts()
+
+submission_file.to_csv("xgboost_%sdepth_regression_lin_opt_splitter.csv" % best_params['max_depth'])
 
 # dummied
 # The best metric is:  0.618949515181 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.6, 'max_depth': 8}

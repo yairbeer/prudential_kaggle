@@ -88,17 +88,16 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
 
 
 def ranking(predictions, split_index):
-    print predictions
+    # print predictions
     ranked_predictions = np.ones(predictions.shape)
 
     for i in range(1, len(split_index)):
         cond = (split_index[i-1] <= predictions) * 1 * (predictions < split_index[i])
         ranked_predictions[cond.astype('bool')] = i+1
-    print split_index[-1]
     cond = (predictions >= split_index[-1])
     ranked_predictions[cond] = len(split_index) + 1
-    print cond
-    print ranked_predictions
+    # print cond
+    # print ranked_predictions
     return ranked_predictions
 
 train_result = pd.DataFrame.from_csv("train_result.csv")
@@ -108,36 +107,59 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-train_prediction = pd.DataFrame.from_csv("raw_predictions.csv")
+train_prediction = pd.DataFrame.from_csv("meta_train_boost_regression.csv")
 train_prediction = np.array(train_prediction).ravel()
 base_splitter = np.arange(7) + 1.5
-print base_splitter
 basecase = ranking(train_prediction, base_splitter)
-
+# show = zip(list(basecase), list(train_prediction), list(train_result))
+# for line in show[:1000]:
+#     print line
 # basecase_naive = train_prediction
-print quadratic_weighted_kappa(basecase, train_result)
+print quadratic_weighted_kappa(train_result, basecase)
 
-# basecase_naive baseline: -0.00442342371227
+# basecase_naive baseline: -0.00590368902887
+# add constant
+x0_range = np.arange(-0.5, 0.55, 0.05)
+x1_range = np.arange(0.1, 1.35, 0.05)
+bestcase = np.array(ranking(train_prediction, base_splitter)).astype('int')
+bestscore = quadratic_weighted_kappa(train_result, basecase)
 
-best_metric = 0
-best_params = []
-param_grid = [
-              {'silent': [1], 'nthread': [4],
-               'eval_metric': ['rmse'],
-               'eta': [0.03],
-               'objective': ['reg:linear'],
-               'max_depth': [9],
-               'num_round': [200],
-               'fit_const': [0.5],
-               'subsample': [0.75]},
-             ]
+print 'start linear optimization'
+# optimize classifier
+for x0 in x0_range:
+    for x1 in x1_range:
+        case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter))).astype('int')
+        score = quadratic_weighted_kappa(train_result, case)
+        if score > bestscore:
+            bestscore = score
+            bestcase = case
+            print 'For splitter ', (x0 + x1 * base_splitter)
+            print 'The score is %f' % bestscore
 
-print 'start optimizing'
-for params in ParameterGrid(param_grid):
-    print params
-    metric = 0
-    print 'The quadratic weighted kappa is: ', np.mean(metric)
-    if np.mean(metric) > best_metric:
-        best_metric = np.mean(metric)
-        best_params = params
-    print 'The best metric is: ', best_metric, 'for the params: ', best_params
+# add constant
+x0_range = np.arange(-0.5, 0.55, 0.05)
+x1_range = np.arange(0.1, 1.35, 0.05)
+x2_range = np.arange(-0.5, 0.525, 0.025)
+bestcase = np.array(ranking(train_prediction, base_splitter)).astype('int')
+bestscore = quadratic_weighted_kappa(train_result, basecase)
+
+print 'start quadratic optimization'
+# optimize classifier
+for x0 in x0_range:
+    for x1 in x1_range:
+        for x2 in x2_range:
+            case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter + x2 * base_splitter**2))).astype('int')
+            score = quadratic_weighted_kappa(train_result, case)
+            if score > bestscore:
+                bestscore = score
+                bestcase = case
+                print 'For splitter ', (x0 + x1 * base_splitter)
+                print 'The score is %f' % bestscore
+
+# quad
+# For splitter  [ 1.5   2.25  2.8   3.15  3.3   3.25  3.  ]
+# The score is -0.006518
+
+# lin
+# For splitter  [ 1.85  2.75  3.65  4.55  5.45  6.35  7.25]
+# The score is 0.632679
