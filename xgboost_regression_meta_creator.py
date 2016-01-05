@@ -134,8 +134,20 @@ test = stding.transform(test_arr)
 # 4th
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
-              {'silent': [1], 'nthread': [2], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [80], 'fit_const': [0.5],
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [3], 'num_round': [1500], 'fit_const': [0.5],
+               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [5], 'num_round': [1100], 'fit_const': [0.5],
+               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [900], 'fit_const': [0.5],
+               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [800], 'fit_const': [0.5],
+               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [9], 'num_round': [400], 'fit_const': [0.5],
                'subsample': [0.75]},
              ]
 
@@ -145,7 +157,7 @@ param_grid = [
 for params in ParameterGrid(param_grid):
     print params
     # CV
-    cv_n = 2
+    cv_n = 12
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
     meta_train = np.ones((train_arr.shape[0],))
