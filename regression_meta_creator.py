@@ -2,7 +2,7 @@ from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-import xgboostlib.xgboost as xgboost
+from sklearn.linear_model import LinearRegression
 from sklearn.cross_validation import StratifiedKFold
 
 __author__ = 'YBeer'
@@ -109,12 +109,12 @@ train_result = np.array(train_result).ravel()
 
 train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
 train.fillna(999)
-train_arr = np.array(train)
 col_list = list(train.columns.values)
+train = np.array(train)
 
 test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
 test.fillna(999)
-test_arr = np.array(test)
+test = np.array(test)
 
 
 # print train_result.shape[1], ' categorial'
@@ -122,8 +122,8 @@ print train.shape[1], ' columns'
 
 # Standardizing
 stding = StandardScaler()
-train = stding.fit_transform(train_arr)
-test = stding.transform(test_arr)
+train = stding.fit_transform(train)
+test = stding.transform(test)
 
 # # Linear best
 # splitter = [1.85, 2.75, 3.65, 4.55, 5.45, 6.35, 7.25]
@@ -134,32 +134,30 @@ test = stding.transform(test_arr)
 # 4th
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
-              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [800], 'fit_const': [0.5],
-               'subsample': [0.75]}
+              {'loss': ['squared_loss'], 'n_iter': [100], 'alpha': [0.03]}
              ]
 
 # print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
     # CV
+    regressor = LinearRegression()
     cv_n = 12
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
-    meta_train = np.ones((train_arr.shape[0],))
+    meta_train = np.ones((train.shape[0],))
     metric = []
     for train_index, test_index in kf:
-        X_train, X_test = train_arr[train_index, :], train_arr[test_index, :]
+        X_train, X_test = train[train_index, :], train[test_index, :]
         y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
         # train machine learning
-
-        xgclassifier = xgboost.train(params, xg_train, num_round, watchlist)
+        regressor.fit(X_train, y_train)
 
         # predict
-        predicted_results = xgclassifier.predict(xg_test)
+        predicted_results = regressor.predict(X_test)
         meta_train[test_index] = predicted_results
         classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
-        predicted_results += params['fit_const']
+        predicted_results += 0.5
         predicted_results = np.floor(predicted_results).astype('int')
         predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
         predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
@@ -171,18 +169,13 @@ for params in ParameterGrid(param_grid):
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
 
-    pd.DataFrame(meta_train).to_csv('meta_train_boost_regression_%d_deep.csv' % params['max_depth'])
+    pd.DataFrame(meta_train).to_csv('meta_train_linear_regression.csv')
     # train machine learning
-    xg_train = xgboost.DMatrix(train_arr, label=train_result)
-    xg_test = xgboost.DMatrix(test_arr)
 
-    watchlist = [(xg_train, 'train')]
-
-    num_round = params['num_round']
-    xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
+    regressor.fit(train, train_result)
 
     # predict
-    predicted_results = xgclassifier.predict(xg_test)
-    pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_%d_deep.csv' % params['max_depth'])
+    predicted_results = regressor.predict(test)
+    pd.DataFrame(predicted_results).to_csv('meta_test_linear_regression.csv')
 
 
