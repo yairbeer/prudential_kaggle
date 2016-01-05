@@ -192,8 +192,11 @@ submission_file.to_csv("ensemble_linear_regression.csv")
 # regression
 # only bossting regressor, no intercept: 0.662372196259
 # only bossting regressor, with intercept: 0.662542431915
-# only bossting regressor + class, no intercept: 0.66344342224
+# only bossting regressor + class, no intercept: 0.66344342224, works bad on test
 # only bossting regressor + class, with intercept: 0.663248699375
 
 # added linear regression
 # only bossting regressor + linear, with intercept: 0.662427982667
+
+# added RF
+# only bossting regressor + linear, with intercept:

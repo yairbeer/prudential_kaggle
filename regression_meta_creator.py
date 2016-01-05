@@ -134,8 +134,8 @@ test = stding.transform(test)
 # 4th
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
-              {'n_estimators': [30], 'max_depth': [5, 10, 20, 30], 'max_features': [0.1, 0.2, 0.4, 0.8, 1],
-               'min_samples_split': [1, 2, 4]}
+              {'n_estimators': [30], 'max_depth': [5, 10, 20, 30], 'max_features': [0.1, 0.2, 0.4, 0.8, 1.0],
+               'min_samples_split': [2]}
              ]
 
 # print 'start CV'
