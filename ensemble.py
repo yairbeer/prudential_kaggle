@@ -140,7 +140,7 @@ best_params = []
 param_grid = {'silent': [1], 'nthread': [1], 'eval_metric': ['rmse'], 'eta': [0.01],
               'objective': ['reg:linear'],
               'max_depth': [5],
-              'num_round': [600],
+              'num_round': [800],
               'fit_const': [0.5],
               'subsample': [0.75]}
 
@@ -159,7 +159,7 @@ for i, params in enumerate(ParameterGrid(param_grid)):
     print params
     # CV
     meta_train = np.ones((train.shape[0],))
-    cv_n = 8
+    cv_n = 10
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
     metric = []
     for train_index, test_index in kf:
@@ -176,6 +176,7 @@ for i, params in enumerate(ParameterGrid(param_grid)):
 
         # predict
         predicted_results = xgclassifier.predict(xg_test)
+        meta_train[test_index] = predicted_results
         classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
         predicted_results += params['fit_const']
         predicted_results = np.floor(predicted_results).astype('int')
@@ -194,7 +195,7 @@ for i, params in enumerate(ParameterGrid(param_grid)):
         best_metatrain = meta_train
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_ensemble.csv')
+pd.DataFrame(best_metatrain).to_csv('train_boost_regression_ensemble.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train, label=train_result)
 xg_test = xgboost.DMatrix(test)

@@ -103,7 +103,7 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-train_prediction = pd.DataFrame.from_csv("meta_train_boost_regression.csv")
+train_prediction = pd.DataFrame.from_csv("meta_train_boost_regression_ensemble.csv")
 train_prediction = np.array(train_prediction).ravel()
 base_splitter = np.arange(7) + 1.5
 basecase = ranking(train_prediction, base_splitter)
