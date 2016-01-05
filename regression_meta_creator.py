@@ -2,7 +2,7 @@ from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.cross_validation import StratifiedKFold
 
 __author__ = 'YBeer'
@@ -134,15 +134,18 @@ test = stding.transform(test)
 # 4th
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
-              {'loss': ['squared_loss'], 'n_iter': [100], 'alpha': [0.03]}
+              {'n_estimators': [30], 'max_depth': [5, 10, 20, 30], 'max_features': [0.1, 0.2, 0.4, 0.8, 1],
+               'min_samples_split': [1, 2, 4]}
              ]
 
 # print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
     # CV
-    regressor = LinearRegression()
-    cv_n = 12
+    regressor = RandomForestRegressor(n_estimators=params['n_estimators'], max_depth=params['n_estimators'],
+                                      max_features=params['max_features'],
+                                      min_samples_split=params['min_samples_split'])
+    cv_n = 4
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
     meta_train = np.ones((train.shape[0],))
@@ -161,21 +164,21 @@ for params in ParameterGrid(param_grid):
         predicted_results = np.floor(predicted_results).astype('int')
         predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
         predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-        print pd.Series(predicted_results).value_counts()
-        print pd.Series(y_test).value_counts()
+        # print pd.Series(predicted_results).value_counts()
+        # print pd.Series(y_test).value_counts()
         print quadratic_weighted_kappa(y_test, classified_predicted_results)
-        print quadratic_weighted_kappa(y_test, predicted_results)
+        # print quadratic_weighted_kappa(y_test, predicted_results)
         metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
 
-    pd.DataFrame(meta_train).to_csv('meta_train_linear_regression.csv')
+    pd.DataFrame(meta_train).to_csv('meta_train_RF_regression.csv')
     # train machine learning
 
     regressor.fit(train, train_result)
 
     # predict
     predicted_results = regressor.predict(test)
-    pd.DataFrame(predicted_results).to_csv('meta_test_linear_regression.csv')
+    pd.DataFrame(predicted_results).to_csv('meta_test_RF_regression.csv')
 
 

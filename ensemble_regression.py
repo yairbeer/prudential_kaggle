@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import xgboostlib.xgboost as xgboost
 import glob
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import Lasso, LinearRegression
 from sklearn.cross_validation import StratifiedKFold
 
 __author__ = 'YBeer'
@@ -119,14 +119,14 @@ result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
 # combining meta_estimators
-train = glob.glob('meta_train_boost_re*')
+train = glob.glob('meta_train*')
 print train
 for i in range(len(train)):
     train[i] = pd.DataFrame.from_csv(train[i])
 train = pd.concat(train, axis=1)
 train = np.array(train)
 
-test = glob.glob('meta_test_boost_re*')
+test = glob.glob('meta_test*')
 print test
 for i in range(len(test)):
     test[i] = pd.DataFrame.from_csv(test[i])
@@ -141,8 +141,8 @@ splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.174125
 best_metatrain = 0
 
 # train machine learning
-# regressor = LinearRegression(fit_intercept=True)
-regressor = Lasso(fit_intercept=True)
+regressor = LinearRegression(fit_intercept=True)
+# regressor = Lasso(fit_intercept=True)
 
 # CV
 cv_n = 10
@@ -165,9 +165,9 @@ for train_index, test_index in kf:
     predicted_results = np.floor(predicted_results).astype('int')
     predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
     predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-    # print pd.Series(predicted_results).value_counts()
+    print pd.Series(predicted_results).value_counts()
     # print pd.Series(y_test).value_counts()
-    # print quadratic_weighted_kappa(y_test, classified_predicted_results)
+    print quadratic_weighted_kappa(y_test, classified_predicted_results)
     # print quadratic_weighted_kappa(y_test, predicted_results)
     metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
 print 'The quadratic weighted kappa is: ', np.mean(metric)
@@ -190,7 +190,10 @@ submission_file.to_csv("ensemble_linear_regression.csv")
 # class + reg, dum + not dummy
 
 # regression
-# only regressor, no intercept: 0.662372196259
-# only regressor, with intercept: 0.662542431915
-# only regressor + class, no intercept: 0.66344342224
-# only regressor + class, with intercept: 0.663248699375
+# only bossting regressor, no intercept: 0.662372196259
+# only bossting regressor, with intercept: 0.662542431915
+# only bossting regressor + class, no intercept: 0.66344342224
+# only bossting regressor + class, with intercept: 0.663248699375
+
+# added linear regression
+# only bossting regressor + linear, with intercept: 0.662427982667
