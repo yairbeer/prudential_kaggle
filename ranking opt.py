@@ -1,10 +1,6 @@
-from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-import xgboostlib.xgboost as xgboost
-from sklearn.cross_validation import StratifiedKFold
-
+import scipy.optimize as optimize
 __author__ = 'YBeer'
 
 
@@ -126,25 +122,63 @@ bestcase = np.array(ranking(train_prediction, base_splitter)).astype('int')
 bestscore = quadratic_weighted_kappa(train_result, basecase)
 
 print x0_range.shape[0] * x1_range.shape[0] * x2_range.shape[0] * x3_range.shape[0] * x4_range.shape[0]
-print 'start 4-th optimization'
-# optimize classifier
-for x0 in x0_range:
-    for x1 in x1_range:
-        for x2 in x2_range:
-            for x3 in x3_range:
-                for x4 in x4_range:
-                    case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
+
+
+def opt_cut(x):
+    x0, x1, x2, x3, x4 = x
+    case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
                                                                x2 * base_splitter**2 +
                                                                x3 * base_splitter**3 +
                                                                x4 * base_splitter**4))).astype('int')
-                    score = quadratic_weighted_kappa(train_result, case)
-                    if score > bestscore:
-                        bestscore = score
-                        bestcase = case
-                        print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2 +
-                                                x3 * base_splitter**3 + x4 * base_splitter**4)
-                        print 'Variables x0 = %f, x1 = %f, x2 = %f, x3 = %f, x4 = %f' % (x0, x1, x2, x3, x4)
-                        print 'The score is %f' % bestscore
+    score = -quadratic_weighted_kappa(train_result, case)
+    print score
+    return score
+
+res = optimize.minimize(opt_cut, [0.400000, 1.600000, -0.175000, 0.010000, 0], method='Nelder-Mead', options={'disp': True})
+print res.x
+x0, x1, x2, x3, x4 = res.x
+case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
+                                                               x2 * base_splitter**2 +
+                                                               x3 * base_splitter**3 +
+                                                               x4 * base_splitter**4))).astype('int')
+print (x0 + x1 * base_splitter + x2 * base_splitter**2 + x3 * base_splitter**3 + x4 * base_splitter**4)
+print quadratic_weighted_kappa(train_result, case)
+
+# res = optimize.differential_evolution(opt_cut, [0.400000, 1.600000, -0.175000, 0.010000, 0], disp=True)
+# print res.x
+res = optimize.differential_evolution(opt_cut, [0, 1, 0, 0, 0], disp=True)
+print res.x
+x0, x1, x2, x3, x4 = res.x
+case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
+                                                               x2 * base_splitter**2 +
+                                                               x3 * base_splitter**3 +
+                                                               x4 * base_splitter**4))).astype('int')
+print (x0 + x1 * base_splitter + x2 * base_splitter**2 + x3 * base_splitter**3 + x4 * base_splitter**4)
+print quadratic_weighted_kappa(train_result, case)
+
+# print 'start 4-th optimization'
+# # optimize classifier
+# n_iterations = 1000
+# bestscore = 0
+# for iteration in range(n_iterations):
+#     x0, x1, x2, x3 = [0.400000, 1.600000, -0.175000, 0.010000]
+#     # x0 = np.random.uniform(-1, 1)
+#     # x1 = np.random.uniform(-1, 1)
+#     # x2 = np.random.uniform(-0.2, 0.2)
+#     # x3 = np.random.uniform(-0.2, 0.2)
+#     x4 = np.random.uniform(-0.2, 0.2)
+#     case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
+#                                                x2 * base_splitter**2 +
+#                                                x3 * base_splitter**3 +
+#                                                x4 * base_splitter**4))).astype('int')
+#     score = quadratic_weighted_kappa(train_result, case)
+#     if score > bestscore:
+#         bestscore = score
+#         bestcase = case
+#         print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2 +
+#                                 x3 * base_splitter**3 + x4 * base_splitter**4)
+#         print 'Variables x0 = %f, x1 = %f, x2 = %f, x3 = %f, x4 = %f' % (x0, x1, x2, x3, x4)
+#         print 'The score is %f' % bestscore
 
 # print 'start linear optimization'
 # # optimize classifier
@@ -192,6 +226,10 @@ for x0 in x0_range:
 #                     print 'The score is %f' % bestscore
 
 # basecase_naive baseline: 0.609289171153
+# 4th
+# x = [  4.17220587e-01   1.60267961e+00  -1.75452819e-01   1.00609841e-02  -5.95422308e-06]
+# [ 2.46039684  3.48430979  4.30777339  4.99072484  5.59295844  6.17412558 6.79373477]
+# 0.658710095337
 
 # cubic
 # For splitter  [ 2.44    3.4625  4.285   4.9675  5.57    6.1525  6.775 ]

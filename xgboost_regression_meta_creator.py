@@ -125,10 +125,6 @@ stding = StandardScaler()
 train = stding.fit_transform(train_arr)
 test = stding.transform(test_arr)
 
-best_metric = 0
-best_params = []
-best_metatrain = 0
-
 # # Linear best
 # splitter = [1.85, 2.75, 3.65, 4.55, 5.45, 6.35, 7.25]
 # # Quadratic best
@@ -139,7 +135,7 @@ best_metatrain = 0
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
               {'silent': [1], 'nthread': [2], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [800], 'fit_const': [0.5],
+               'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [80], 'fit_const': [0.5],
                'subsample': [0.75]},
              ]
 
@@ -149,7 +145,7 @@ param_grid = [
 for params in ParameterGrid(param_grid):
     print params
     # CV
-    cv_n = 8
+    cv_n = 2
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
     meta_train = np.ones((train_arr.shape[0],))
@@ -181,71 +177,19 @@ for params in ParameterGrid(param_grid):
         metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
-    if np.mean(metric) > best_metric:
-        best_metric = np.mean(metric)
-        best_params = params
-        best_metatrain = meta_train
-    print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_dum.csv')
-# train machine learning
-# best_params = params
-xg_train = xgboost.DMatrix(train_arr, label=train_result)
-xg_test = xgboost.DMatrix(test_arr)
+    pd.DataFrame(meta_train).to_csv('meta_train_boost_regression_%d_deep.csv' % params['max_depth'])
+    # train machine learning
+    xg_train = xgboost.DMatrix(train_arr, label=train_result)
+    xg_test = xgboost.DMatrix(test_arr)
 
-watchlist = [(xg_train, 'train')]
+    watchlist = [(xg_train, 'train')]
 
-num_round = best_params['num_round']
-xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
+    num_round = params['num_round']
+    xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
 
-# predict
-predicted_results = xgclassifier.predict(xg_test)
-# pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_dum.csv')
+    # predict
+    predicted_results = xgclassifier.predict(xg_test)
+    pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_%d_deep.csv' % params['max_depth'])
 
-# print 'writing to file'
-classed_results = np.array(ranking(predicted_results, splitter)).astype('int')
-submission_file = pd.DataFrame.from_csv("sample_submission.csv")
-submission_file['Response'] = classed_results
 
-print submission_file['Response'].value_counts()
-predicted_results += best_params['fit_const']
-predicted_results = np.floor(predicted_results).astype('int')
-predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
-predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
-print pd.Series(predicted_results).value_counts()
-
-submission_file.to_csv("xgboost_%sdepth_regression_opt_4th_splitter.csv" % best_params['num_round'])
-
-# dummied
-# The best metric is:  0.618949515181 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.6, 'max_depth': 8}
-# The best metric with linear optimization is:  0.618949515181 for the params:  {'silent': 1, 'eval_metric': 'rmse', 'subsample': 0.75, 'objective': 'reg:linear', 'nthread': 4, 'num_round': 850, 'eta': 0.03, 'fit_const': 0.6, 'max_depth': 8}
-# 7    5278
-# 6    4281
-# 5    3251
-# 8    2174
-# 4    2147
-# 3    1511
-# 2     858
-# 1     265
-# not dummied
-
-# splitter for dummy xgboost regression
-# 4th
-# x = [  4.17220587e-01   1.60267961e+00  -1.75452819e-01   1.00609841e-02  -5.95422308e-06]
-# [ 2.46039684  3.48430979  4.30777339  4.99072484  5.59295844  6.17412558 6.79373477]
-# 0.658710095337
-
-# cubic
-# For splitter  [ 2.44    3.4625  4.285   4.9675  5.57    6.1525  6.775 ]
-# Variables x0 = 0.400000, x1 = 1.600000, x2 = -0.175000, x3 = 0.010000
-# The score is 0.658157
-
-# quad
-# For splitter  [ 2.28125  3.38125  4.33125  5.13125  5.78125  6.28125  6.63125]
-# Variables x0 = 0.350000, x1 = 1.400000, x2 = -0.075000
-# The score is 0.655544
-
-# lin
-# For splitter  [ 1.85  2.75  3.65  4.55  5.45  6.35  7.25]
-# Variables x0 = 0.500000, x1 = 0.900000
-# The score is 0.632679
