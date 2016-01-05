@@ -97,6 +97,21 @@ def ranking(predictions, split_index):
     ranked_predictions.iloc[predictions >= split_index[-1]] = len(split_index-1)
     return ranked_predictions
 
+
+def ranking(predictions, split_index):
+    # print predictions
+    ranked_predictions = np.ones(predictions.shape)
+
+    for i in range(1, len(split_index)):
+        cond = (split_index[i-1] <= predictions) * 1 * (predictions < split_index[i])
+        ranked_predictions[cond.astype('bool')] = i+1
+    cond = (predictions >= split_index[-1])
+    ranked_predictions[cond] = len(split_index) + 1
+    # print cond
+    # print ranked_predictions
+    return ranked_predictions
+
+
 train_result = pd.DataFrame.from_csv("train_result.csv")
 # print train_result['Response'].value_counts()
 
@@ -122,23 +137,28 @@ print train.shape[1], ' columns'
 
 best_metric = 0
 best_params = []
-param_grid = {'silent': [1], 'nthread': [4], 'eval_metric': ['rmse'], 'eta': [0.03],
+param_grid = {'silent': [1], 'nthread': [1], 'eval_metric': ['rmse'], 'eta': [0.01],
               'objective': ['reg:linear'],
-              'max_depth': [6, 7, 8],
-              'num_round': [150, 200, 250, 300],
-              'fit_const': [0.4, 0.5, 0.6],
-              'subsample': [0.5, 0.75, 1]}
+              'max_depth': [5],
+              'num_round': [600],
+              'fit_const': [0.5],
+              'subsample': [0.75]}
 
 # Standardizing
 stding = StandardScaler()
 train = stding.fit_transform(train)
 test = stding.transform(test)
 
+# 4th
+splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
+best_metatrain = 0
+
 print 'start CV'
 for i, params in enumerate(ParameterGrid(param_grid)):
     print i
     print params
     # CV
+    meta_train = np.ones((train.shape[0],))
     cv_n = 8
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
     metric = []
@@ -156,21 +176,25 @@ for i, params in enumerate(ParameterGrid(param_grid)):
 
         # predict
         predicted_results = xgclassifier.predict(xg_test)
+        classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
         predicted_results += params['fit_const']
         predicted_results = np.floor(predicted_results).astype('int')
         predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
         predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-        # print pd.Series(predicted_results).value_counts()
-        # print pd.Series(y_test).value_counts()
-        # print quadratic_weighted_kappa(y_test, predicted_results)
-        metric.append(quadratic_weighted_kappa(y_test, predicted_results))
+        print pd.Series(predicted_results).value_counts()
+        print pd.Series(y_test).value_counts()
+        print quadratic_weighted_kappa(y_test, classified_predicted_results)
+        print quadratic_weighted_kappa(y_test, predicted_results)
+        metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
     if np.mean(metric) > best_metric:
         best_metric = np.mean(metric)
         best_params = params
+        best_metatrain = meta_train
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
+pd.DataFrame(best_metatrain).to_csv('meta_train_boost_regression_ensemble.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train, label=train_result)
 xg_test = xgboost.DMatrix(test)
@@ -182,17 +206,14 @@ xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-predicted_results += best_params['fit_const']
-predicted_results = np.floor(predicted_results).astype('int')
-predicted_results = predicted_results * (predicted_results > 0) + 1 * (predicted_results < 1)
-predicted_results = predicted_results * (predicted_results < 9) + 8 * (predicted_results > 8)
 
 print 'writing to file'
+classed_results = np.array(ranking(predicted_results, splitter)).astype('int')
 submission_file = pd.DataFrame.from_csv("sample_submission.csv")
-submission_file['Response'] = predicted_results
+submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("xgboost_ensemble_%sdepth_regression.csv" % best_params['max_depth'])
+submission_file.to_csv("ensemble_%ddepth_regression.csv" % best_params['max_depth'])
 
 # class + reg, dum + not dummy

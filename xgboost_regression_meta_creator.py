@@ -141,7 +141,7 @@ param_grid = [
                'objective': ['reg:linear'], 'max_depth': [5], 'num_round': [1100], 'fit_const': [0.5],
                'subsample': [0.75]},
               {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [900], 'fit_const': [0.5],
+               'object/*-+ive': ['reg:linear'], 'max_depth': [7], 'num_round': [900], 'fit_const': [0.5],
                'subsample': [0.75]},
               {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
                'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [800], 'fit_const': [0.5],
