@@ -1,9 +1,11 @@
+from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
-import xgboostlib.xgboost as xgboost
-import glob
-from sklearn.linear_model import Lasso, LinearRegression
+from sklearn.preprocessing import StandardScaler
 from sklearn.cross_validation import StratifiedKFold
+from keras.models import Sequential
+from keras.layers.core import Dense, Activation, Dropout
+from keras.optimizers import SGD
 
 __author__ = 'YBeer'
 
@@ -88,16 +90,6 @@ def quadratic_weighted_kappa(rater_a, rater_b, min_rating=None, max_rating=None)
 
 
 def ranking(predictions, split_index):
-    predictions = pd.Series(predictions)
-    ranked_predictions = predictions.copy()
-    ranked_predictions.iloc[predictions < split_index[0]] = 1
-    for i in range(1, (len(split_index) - 1)):
-        ranked_predictions.iloc[split_index[i-1] <= predictions < split_index[i]] = i+1
-    ranked_predictions.iloc[predictions >= split_index[-1]] = len(split_index-1)
-    return ranked_predictions
-
-
-def ranking(predictions, split_index):
     # print predictions
     ranked_predictions = np.ones(predictions.shape)
 
@@ -110,106 +102,97 @@ def ranking(predictions, split_index):
     # print ranked_predictions
     return ranked_predictions
 
-
 train_result = pd.DataFrame.from_csv("train_result.csv")
-# print train_result['Response'].value_counts()
+print train_result['Response'].value_counts()
 
 col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-# combining meta_estimators
-train = glob.glob('meta_train*')
-print train
-for i in range(len(train)):
-    train[i] = pd.DataFrame.from_csv(train[i])
-train = pd.concat(train, axis=1)
+train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
+train.fillna(999)
+col_list = list(train.columns.values)
 train = np.array(train)
 
-test = glob.glob('meta_test*')
-print test
-for i in range(len(test)):
-    test[i] = pd.DataFrame.from_csv(test[i])
-test = pd.concat(test, axis=1)
+test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
+test.fillna(999)
 test = np.array(test)
+
 
 # print train_result.shape[1], ' categorial'
 print train.shape[1], ' columns'
 
+# Standardizing
+stding = StandardScaler()
+train = stding.fit_transform(train)
+test = stding.transform(test)
+
+input_cols = train.shape[1]
+# # Linear best
+# splitter = [1.85, 2.75, 3.65, 4.55, 5.45, 6.35, 7.25]
+# # Quadratic best
+# splitter = [2.28125, 3.38125, 4.33125, 5.13125, 5.78125, 6.28125, 6.63125]
+# # Cubic best
+# splitter = [2.44, 3.4625, 4.285, 4.9675, 5.57, 6.1525, 6.775]
 # 4th
-# splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
-# nelder mead opt
-splitter = np.array([2.66904789, 3.50581566, 4.2500559, 4.83546497, 5.64020492, 6.26927023, 6.8221132])
-riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
-best_metatrain = 0
-risk = 0.95
-final_splitter = list(splitter * risk + riskless_splitter * (1 - risk))
+splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
+param_grid = [
+              {'n_estimators': [400], 'max_depth': [10], 'max_features': [0.4],
+               'min_samples_split': [2]}
+             ]
 
-# train machine learning
-regressor = LinearRegression(fit_intercept=True)
-# regressor = Lasso(fit_intercept=True)
+# print 'start CV'
+for params in ParameterGrid(param_grid):
+    print params
+    # CV
+    model = Sequential()
+    model.add(Dense(64, input_dim=input_cols, init='uniform'))
+    model.add(Activation('tanh'))
+    model.add(Dropout(0.5))
+    model.add(Dense(64, init='uniform'))
+    model.add(Activation('tanh'))
+    model.add(Dropout(0.5))
+    model.add(Dense(30, init='uniform'))
+    model.add(Activation('softmax'))
 
-# CV
-cv_n = 10
-kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='mean_squared_error', optimizer=sgd)
 
-meta_train = np.ones((train.shape[0],))
-metric = []
-for train_index, test_index in kf:
-    X_train, X_test = train[train_index, :], train[test_index, :]
-    y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
+    cv_n = 2
+    kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
+
+    meta_train = np.ones((train.shape[0],))
+    metric = []
+    for train_index, test_index in kf:
+        X_train, X_test = train[train_index, :], train[test_index, :]
+        y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
+        # train machine learning
+        model.fit(X_train, y_train, nb_epoch=20, batch_size=16)
+        score = model.evaluate(X_test, y_test, batch_size=16)
+
+        # # predict
+        # predicted_results = regressor.predict(X_test)
+        # meta_train[test_index] = predicted_results
+        # classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
+        # predicted_results += 0.5
+        # predicted_results = np.floor(predicted_results).astype('int')
+        # predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
+        # predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
+        # # print pd.Series(predicted_results).value_counts()
+        # # print pd.Series(y_test).value_counts()
+        # print quadratic_weighted_kappa(y_test, classified_predicted_results)
+        # # print quadratic_weighted_kappa(y_test, predicted_results)
+        # metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
+
+    print 'The quadratic weighted kappa is: ', np.mean(metric)
+
+    pd.DataFrame(meta_train).to_csv('meta_train_RF_depth%d_regression.csv' % params['max_depth'])
     # train machine learning
 
-    regressor.fit(X_train, y_train)
+    # regressor.fit(train, train_result)
 
     # predict
-    predicted_results = regressor.predict(X_test)
-    meta_train[test_index] = predicted_results
-    classified_predicted_results = np.array(ranking(predicted_results, final_splitter)).astype('int')
-    predicted_results += 0.5
-    predicted_results = np.floor(predicted_results).astype('int')
-    predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
-    predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-    print pd.Series(predicted_results).value_counts()
-    # print pd.Series(y_test).value_counts()
-    print quadratic_weighted_kappa(y_test, classified_predicted_results)
-    # print quadratic_weighted_kappa(y_test, predicted_results)
-    metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
-print 'The quadratic weighted kappa is: ', np.mean(metric)
+    # predicted_results = regressor.predict(test)
+    # pd.DataFrame(predicted_results).to_csv('meta_test_RF_depth%d_regression.csv' % params['max_depth'])
 
-regressor.fit(train, train_result)
-print regressor.coef_, regressor.intercept_
 
-# predict
-predicted_results = regressor.predict(test)
-
-print 'writing to file'
-classed_results = np.array(ranking(predicted_results, final_splitter)).astype('int')
-submission_file = pd.DataFrame.from_csv("sample_submission.csv")
-submission_file['Response'] = classed_results
-
-print submission_file['Response'].value_counts()
-
-submission_file.to_csv("ensemble_linear_regression.csv")
-
-# class + reg, dum + not dummy
-
-# regression
-# only bossting regressor, no intercept: 0.662372196259
-# only bossting regressor, with intercept: 0.662542431915
-# only bossting regressor + class, no intercept: 0.66344342224, works bad on test
-# only bossting regressor + class, with intercept: 0.663248699375
-
-# added linear regression
-# only bossting regressor + linear, with intercept: 0.662427982667
-
-# added nedler mead optimized spliter
-# only bossting regressor + linear, with intercept: 0.666313598761
-
-# added RF depth = 10
-# only bossting regressor + linear, with intercept: 0.663928238356
-
-# added RF depth = 20
-# only bossting regressor + linear, with intercept: 0.664636681173
-
-# risk = 0.95: 0.664498558395

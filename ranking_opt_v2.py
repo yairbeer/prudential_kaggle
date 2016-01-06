@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import scipy.optimize as optimize
+from sklearn.cross_validation import StratifiedKFold
+from sklearn.grid_search import ParameterGrid
+
 __author__ = 'YBeer'
 
 
@@ -138,7 +141,7 @@ def opt_cut(x):
 def opt_cut_v2(x):
     case = np.array(ranking(train_prediction, x)).astype('int')
     score = -1 * quadratic_weighted_kappa(train_result, case)
-    print score
+    # print score
     return score
 
 res = optimize.minimize(opt_cut_v2, [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844,
@@ -147,6 +150,42 @@ print res.x
 case = np.array(ranking(train_prediction, res.x)).astype('int')
 print quadratic_weighted_kappa(train_result, case)
 
+splitter = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477])
+riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
+param_grid = [
+              {'risk': [0.85, 0.9, 0.95, 1, 1.05]}
+             ]
+print 'start CV'
+
+
+def opt_cut_v2_cv(x):
+    case = np.array(ranking(X_train, x)).astype('int')
+    score = -1 * quadratic_weighted_kappa(y_train, case)
+    return score
+
+for params in ParameterGrid(param_grid):
+    print params
+    # CV
+    cv_n = 12
+    kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
+    metric = []
+    for train_index, test_index in kf:
+        X_train, X_test = train_prediction[train_index], train_prediction[test_index]
+        y_train, y_test = train_result[train_index], train_result[test_index]
+        # train machine learning
+        res = optimize.minimize(opt_cut_v2_cv, [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844,
+                                                6.17412558, 6.79373477], method='Nelder-Mead',
+                                # options={'disp': True}
+                                )
+        # print res.x
+        cur_splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
+        # print cur_splitter
+        classified_predicted_results = np.array(ranking(X_test, cur_splitter)).astype('int')
+        # predict
+        print quadratic_weighted_kappa(y_test, classified_predicted_results)
+        metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
+
+    print 'The quadratic weighted kappa is: ', np.mean(metric)
 # full optimize
 # [ 2.66904789  3.50581566  4.2500559   4.83546497  5.64020492  6.26927023, 6.8221132 ]
 # 0.662825541303
