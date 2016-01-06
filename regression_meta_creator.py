@@ -134,7 +134,13 @@ test = stding.transform(test)
 # 4th
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
-              {'n_estimators': [30], 'max_depth': [5, 10, 20, 30], 'max_features': [0.1, 0.2, 0.4, 0.8, 1.0],
+              {'n_estimators': [400], 'max_depth': [10], 'max_features': [0.4],
+               'min_samples_split': [2]},
+              {'n_estimators': [400], 'max_depth': [20], 'max_features': [0.6],
+               'min_samples_split': [2]},
+              {'n_estimators': [400], 'max_depth': [30], 'max_features': [0.4],
+               'min_samples_split': [2]},
+              {'n_estimators': [400], 'max_depth': [40], 'max_features': [0.2],
                'min_samples_split': [2]}
              ]
 
@@ -142,10 +148,10 @@ param_grid = [
 for params in ParameterGrid(param_grid):
     print params
     # CV
-    regressor = RandomForestRegressor(n_estimators=params['n_estimators'], max_depth=params['n_estimators'],
+    regressor = RandomForestRegressor(n_estimators=params['n_estimators'], max_depth=params['max_depth'],
                                       max_features=params['max_features'],
                                       min_samples_split=params['min_samples_split'])
-    cv_n = 4
+    cv_n = 12
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
     meta_train = np.ones((train.shape[0],))
@@ -172,13 +178,13 @@ for params in ParameterGrid(param_grid):
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
 
-    pd.DataFrame(meta_train).to_csv('meta_train_RF_regression.csv')
+    pd.DataFrame(meta_train).to_csv('meta_train_RF_depth%d_regression.csv' % params['max_depth'])
     # train machine learning
 
     regressor.fit(train, train_result)
 
     # predict
     predicted_results = regressor.predict(test)
-    pd.DataFrame(predicted_results).to_csv('meta_test_RF_regression.csv')
+    pd.DataFrame(predicted_results).to_csv('meta_test_RF_depth%d_regression.csv' % params['max_depth'])
 
 

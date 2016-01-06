@@ -103,16 +103,16 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-train_prediction = pd.DataFrame.from_csv("meta_train_boost_regression.csv")
+train_prediction = pd.DataFrame.from_csv("meta_train_boost_regression_8_deep.csv")
 train_prediction = np.array(train_prediction).ravel()
 base_splitter = np.arange(7) + 1.5
 basecase_train = ranking(train_prediction, base_splitter)
 train_value_count = np.array(pd.Series(basecase_train).value_counts())
 train_value_count = train_value_count.astype('float') / np.sum(train_value_count)
-train_prediction = pd.DataFrame.from_csv("meta_test_boost_regression.csv")
-train_prediction = np.array(train_prediction).ravel()
+test_prediction = pd.DataFrame.from_csv("meta_test_boost_regression_8_deep.csv")
+test_prediction = np.array(test_prediction).ravel()
 base_splitter = np.arange(7) + 1.5
-basecase_test = ranking(train_prediction, base_splitter)
+basecase_test = ranking(test_prediction, base_splitter)
 test_value_count = np.array(pd.Series(basecase_test).value_counts())
 test_value_count = test_value_count.astype('float') / np.sum(test_value_count)
 print train_value_count
@@ -124,17 +124,6 @@ print test_value_count
 # basecase_naive = train_prediction
 print quadratic_weighted_kappa(train_result, basecase_train)
 
-x0_range = np.arange(-5, 5, 0.5)
-x1_range = np.arange(-1.5, 1.5, 0.25)
-x2_range = np.arange(-0.5, 0.6, 0.1)
-x3_range = np.arange(-0.5, 0.6, 0.1)
-x4_range = np.arange(-0.5, 0.6, 0.1)
-bestcase = np.array(ranking(train_prediction, base_splitter)).astype('int')
-bestscore = quadratic_weighted_kappa(train_result, basecase_train)
-
-print x0_range.shape[0] * x1_range.shape[0] * x2_range.shape[0] * x3_range.shape[0] * x4_range.shape[0]
-
-
 def opt_cut(x):
     x0, x1, x2, x3, x4 = x
     case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
@@ -145,98 +134,23 @@ def opt_cut(x):
     print score
     return score
 
-res = optimize.minimize(opt_cut, [0.400000, 1.600000, -0.175000, 0.010000, 0], method='Nelder-Mead', options={'disp': True})
+
+def opt_cut_v2(x):
+    case = np.array(ranking(train_prediction, x)).astype('int')
+    score = -1 * quadratic_weighted_kappa(train_result, case)
+    print score
+    return score
+
+res = optimize.minimize(opt_cut_v2, [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844,
+                                     6.17412558, 6.79373477], method='Nelder-Mead', options={'disp': True})
 print res.x
-x0, x1, x2, x3, x4 = res.x
-case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
-                                                               x2 * base_splitter**2 +
-                                                               x3 * base_splitter**3 +
-                                                               x4 * base_splitter**4))).astype('int')
-print (x0 + x1 * base_splitter + x2 * base_splitter**2 + x3 * base_splitter**3 + x4 * base_splitter**4)
+case = np.array(ranking(train_prediction, res.x)).astype('int')
 print quadratic_weighted_kappa(train_result, case)
 
-# res = optimize.differential_evolution(opt_cut, [0.400000, 1.600000, -0.175000, 0.010000, 0], disp=True)
-# print res.x
-res = optimize.differential_evolution(opt_cut, [0, 1, 0, 0, 0], disp=True)
-print res.x
-x0, x1, x2, x3, x4 = res.x
-case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
-                                                               x2 * base_splitter**2 +
-                                                               x3 * base_splitter**3 +
-                                                               x4 * base_splitter**4))).astype('int')
-print (x0 + x1 * base_splitter + x2 * base_splitter**2 + x3 * base_splitter**3 + x4 * base_splitter**4)
-print quadratic_weighted_kappa(train_result, case)
+# full optimize
+# [ 2.66904789  3.50581566  4.2500559   4.83546497  5.64020492  6.26927023, 6.8221132 ]
+# 0.662825541303
 
-# print 'start 4-th optimization'
-# # optimize classifier
-# n_iterations = 1000
-# bestscore = 0
-# for iteration in range(n_iterations):
-#     x0, x1, x2, x3 = [0.400000, 1.600000, -0.175000, 0.010000]
-#     # x0 = np.random.uniform(-1, 1)
-#     # x1 = np.random.uniform(-1, 1)
-#     # x2 = np.random.uniform(-0.2, 0.2)
-#     # x3 = np.random.uniform(-0.2, 0.2)
-#     x4 = np.random.uniform(-0.2, 0.2)
-#     case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter +
-#                                                x2 * base_splitter**2 +
-#                                                x3 * base_splitter**3 +
-#                                                x4 * base_splitter**4))).astype('int')
-#     score = quadratic_weighted_kappa(train_result, case)
-#     if score > bestscore:
-#         bestscore = score
-#         bestcase = case
-#         print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2 +
-#                                 x3 * base_splitter**3 + x4 * base_splitter**4)
-#         print 'Variables x0 = %f, x1 = %f, x2 = %f, x3 = %f, x4 = %f' % (x0, x1, x2, x3, x4)
-#         print 'The score is %f' % bestscore
-
-# print 'start linear optimization'
-# # optimize classifier
-# for x0 in x0_range:
-#     for x1 in x1_range:
-#         case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter))).astype('int')
-#         score = quadratic_weighted_kappa(train_result, case)
-#         if score > bestscore:
-#             bestscore = score
-#             bestcase = case
-#             print 'For splitter ', (x0 + x1 * base_splitter)
-#             print 'Variables x0 = %f, x1 = %f' % (x0, x1)
-#             print 'The score is %f' % bestscore
-#
-#
-# print 'start quadratic optimization'
-# # optimize classifier
-# for x0 in x0_range:
-#     for x1 in x1_range:
-#         for x2 in x2_range:
-#             case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter + x2 * base_splitter**2))).astype('int')
-#             score = quadratic_weighted_kappa(train_result, case)
-#             if score > bestscore:
-#                 bestscore = score
-#                 bestcase = case
-#                 print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2)
-#                 print 'Variables x0 = %f, x1 = %f, x2 = %f' % (x0, x1, x2)
-#                 print 'The score is %f' % bestscore
-#
-# print 'start cubic optimization'
-# # optimize classifier
-# for x0 in x0_range:
-#     for x1 in x1_range:
-#         for x2 in x2_range:
-#             for x3 in x3_range:
-#                 case = np.array(ranking(train_prediction, (x0 + x1 * base_splitter + x2 * base_splitter**2 +
-#                                                            x3 * base_splitter**3))).astype('int')
-#                 score = quadratic_weighted_kappa(train_result, case)
-#                 if score > bestscore:
-#                     bestscore = score
-#                     bestcase = case
-#                     print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2 +
-#                                                            x3 * base_splitter**3)
-#                     print 'Variables x0 = %f, x1 = %f, x2 = %f, x3 = %f' % (x0, x1, x2, x3)
-#                     print 'The score is %f' % bestscore
-
-# basecase_naive baseline: 0.609289171153
 # 4th
 # x = [  4.17220587e-01   1.60267961e+00  -1.75452819e-01   1.00609841e-02  -5.95422308e-06]
 # [ 2.46039684  3.48430979  4.30777339  4.99072484  5.59295844  6.17412558 6.79373477]
@@ -256,3 +170,4 @@ print quadratic_weighted_kappa(train_result, case)
 # For splitter  [ 1.85  2.75  3.65  4.55  5.45  6.35  7.25]
 # Variables x0 = 0.500000, x1 = 0.900000
 # The score is 0.632679
+

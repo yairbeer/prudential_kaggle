@@ -137,7 +137,9 @@ test = np.array(test)
 print train.shape[1], ' columns'
 
 # 4th
-splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
+# splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
+# nelder mead opt
+splitter = [2.66904789, 3.50581566, 4.2500559, 4.83546497, 5.64020492, 6.26927023, 6.8221132]
 best_metatrain = 0
 
 # train machine learning
@@ -197,6 +199,9 @@ submission_file.to_csv("ensemble_linear_regression.csv")
 
 # added linear regression
 # only bossting regressor + linear, with intercept: 0.662427982667
+
+# added nedler mead optimized spliter
+# only bossting regressor + linear, with intercept: 0.666313598761
 
 # added RF
 # only bossting regressor + linear, with intercept:
