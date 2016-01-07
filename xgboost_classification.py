@@ -124,7 +124,7 @@ test = stding.transform(test_arr)
 
 param_grid = [
               {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
-               'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [20],
+               'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [600],
                'subsample': [0.75]}
              ]
 
@@ -137,7 +137,7 @@ print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
     # CV
-    cv_n = 8
+    cv_n = 10
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
     meta_train = np.ones((train_arr.shape[0], 8))

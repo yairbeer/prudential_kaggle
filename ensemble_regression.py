@@ -211,10 +211,10 @@ print 'the best quadratic weighted kappa is: %f' % best_score
 # predict
 predicted_results = regressor.predict(test)
 
-# final_splitter = list(splitter * best_risk + riskless_splitter * (1 - best_risk))
+final_splitter = list(splitter * best_risk + riskless_splitter * (1 - best_risk))
 
 print 'writing to file'
-classed_results = np.array(ranking(predicted_results, best_splitter)).astype('int')
+classed_results = np.array(ranking(predicted_results, final_splitter)).astype('int')
 submission_file = pd.DataFrame.from_csv("sample_submission.csv")
 submission_file['Response'] = classed_results
 
@@ -247,4 +247,4 @@ submission_file.to_csv("ensemble_linear_regression.csv")
 
 # added RF depth = 40, risk = 1: 0.668522
 
-# added best splitter from CV
+# added best splitter from CV, nelder mead opt splitter was better
