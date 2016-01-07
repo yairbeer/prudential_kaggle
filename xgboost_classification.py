@@ -104,12 +104,12 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel() - 1
 
-train = pd.DataFrame.from_csv("train_v2.csv").astype('float')
+train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
 train.fillna(999)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
-test = pd.DataFrame.from_csv("test_v2.csv").astype('float')
+test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
 test.fillna(999)
 test_arr = np.array(test)
 
@@ -124,7 +124,7 @@ test = stding.transform(test_arr)
 
 param_grid = [
               {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
-               'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [400],
+               'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [20],
                'subsample': [0.75]}
              ]
 
@@ -145,7 +145,6 @@ for params in ParameterGrid(param_grid):
     for train_index, test_index in kf:
         X_train, X_test = train_arr[train_index, :], train_arr[test_index, :]
         y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
-        # train machine learning
         # train machine learning
         xg_train = xgboost.DMatrix(X_train, label=y_train)
         xg_test = xgboost.DMatrix(X_test, label=y_test)
@@ -172,7 +171,7 @@ for params in ParameterGrid(param_grid):
         print best_metatrain
     print 'The best metric is: ', best_metric, 'for the params: ', best_params
 
-pd.DataFrame(best_metatrain).to_csv('meta_train_boost_classification_notdum.csv')
+pd.DataFrame(best_metatrain).to_csv('meta_class_train_boost.csv')
 # train machine learning
 xg_train = xgboost.DMatrix(train_arr, label=train_result)
 xg_test = xgboost.DMatrix(test_arr)
@@ -185,7 +184,7 @@ xgclassifier = xgboost.train(best_params, xg_train, num_round, watchlist);
 # predict
 predicted_results = xgclassifier.predict(xg_test)
 predicted_results = predicted_results.reshape(test_arr.shape[0], 8)
-pd.DataFrame(predicted_results).to_csv('meta_test_boost_classification_notdum.csv')
+pd.DataFrame(predicted_results).to_csv('meta_class_test_boost.csv')
 
 # print 'writing to file'
 # submission_file = pd.DataFrame.from_csv("sample_submission.csv")

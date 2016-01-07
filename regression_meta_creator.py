@@ -134,13 +134,7 @@ test = stding.transform(test)
 # 4th
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
-              {'n_estimators': [400], 'max_depth': [10], 'max_features': [0.4],
-               'min_samples_split': [2]},
-              {'n_estimators': [400], 'max_depth': [20], 'max_features': [0.6],
-               'min_samples_split': [2]},
-              {'n_estimators': [400], 'max_depth': [30], 'max_features': [0.4],
-               'min_samples_split': [2]},
-              {'n_estimators': [400], 'max_depth': [40], 'max_features': [0.2],
+              {'n_estimators': [400], 'max_depth': [50], 'max_features': [0.4],
                'min_samples_split': [2]}
              ]
 

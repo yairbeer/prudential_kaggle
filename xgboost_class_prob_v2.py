@@ -106,8 +106,8 @@ train_arr = stding.fit_transform(train_arr)
 best_metric = 0
 best_params = []
 
-param_grid = {'n_estimators': [1000], 'max_depth': [5], 'max_features': [1.0],
-              'fit_const': [0.5], 'learning_rate': [0.005, 0.01, 0.03], 'subsample': [0.75]}
+param_grid = {'silent': [1], 'nthread': [3],,'n_estimators': [1000], 'max_depth': [5], 'max_features': [1.0],
+              'fit_const': [0.5], 'learning_rate': [0.01], 'subsample': [0.75]}
 
 for params in ParameterGrid(param_grid):
     regressor = GradientBoostingRegressor(n_estimators=params['n_estimators'], max_depth=params['max_depth'],
@@ -142,7 +142,7 @@ for params in ParameterGrid(param_grid):
 # The best metric is:  3.31904137794 for the params:  {'max_features': 0.75, 'n_estimators': 200, 'learning_rate': 0.03, 'max_depth': 4}
 
 print 'training test file'
-test = pd.DataFrame.from_csv("xgboost_test_probabilities.csv")
+test = pd.DataFrame.from_csv("meta_test_boost_probabilities.csv")
 test_arr = np.array(test)
 test_arr = stding.transform(test_arr)
 

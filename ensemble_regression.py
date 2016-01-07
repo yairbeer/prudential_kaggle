@@ -154,11 +154,12 @@ def opt_cut_v2_cv(x):
 
 best_risk = 0
 best_score = 0
+best_splitter = 0
 risk = 0.95
 
 regressor = LinearRegression(fit_intercept=True)
 param_grid = [
-              {'risk': [0.95, 0.97, 0.98, 1, 1.03]}
+              {'risk': [1]}
              ]
 
 print 'start CV'
@@ -168,7 +169,7 @@ for params in ParameterGrid(param_grid):
     # CV
     cv_n = 12
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
-
+    it_splitter = []
     metric = []
     for train_index, test_index in kf:
         X_train, X_test = train[train_index, :], train[test_index, :]
@@ -188,6 +189,7 @@ for params in ParameterGrid(param_grid):
                                 )
         # print res.x
         cur_splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
+        it_splitter.append(cur_splitter)
         # print cur_splitter
         classified_predicted_results = np.array(ranking(predicted_results, cur_splitter)).astype('int')
         # predict
@@ -198,6 +200,8 @@ for params in ParameterGrid(param_grid):
         print 'new best risk'
         best_score = np.mean(metric)
         best_risk = params['risk']
+        it_splitter = np.array(it_splitter)
+        best_splitter = np.average(it_splitter, axis=0)
 
 regressor.fit(train, train_result)
 print 'The regression coefs are:'
@@ -207,10 +211,10 @@ print 'the best quadratic weighted kappa is: %f' % best_score
 # predict
 predicted_results = regressor.predict(test)
 
-final_splitter = list(splitter * best_risk + riskless_splitter * (1 - best_risk))
+# final_splitter = list(splitter * best_risk + riskless_splitter * (1 - best_risk))
 
 print 'writing to file'
-classed_results = np.array(ranking(predicted_results, final_splitter)).astype('int')
+classed_results = np.array(ranking(predicted_results, best_splitter)).astype('int')
 submission_file = pd.DataFrame.from_csv("sample_submission.csv")
 submission_file['Response'] = classed_results
 
@@ -240,3 +244,7 @@ submission_file.to_csv("ensemble_linear_regression.csv")
 
 # moved to n_CV = 12
 # risk = 1, QWK = 0.667689
+
+# added RF depth = 40, risk = 1: 0.668522
+
+# added best splitter from CV

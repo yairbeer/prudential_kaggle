@@ -169,7 +169,7 @@ for params in ParameterGrid(param_grid):
         # train machine learning
         model.fit(X_train, y_train, nb_epoch=20, batch_size=16)
         score = model.evaluate(X_test, y_test, batch_size=16)
-
+        metric.append(score)
         # # predict
         # predicted_results = regressor.predict(X_test)
         # meta_train[test_index] = predicted_results
