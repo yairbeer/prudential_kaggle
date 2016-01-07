@@ -100,23 +100,24 @@ def ranking(predictions, split_index):
     # print ranked_predictions
     return ranked_predictions
 # input probabilities
-train_probabilities = pd.DataFrame.from_csv("a_meta_train_boost_classification.csv")
+train_probabilities = pd.DataFrame.from_csv("meta_class_train_boost.csv")
 train_probabilities_array = np.array(train_probabilities)
 avail_results = np.repeat(np.arange(1, 9).reshape(1, 8), train_probabilities_array.shape[0], axis=0)
 train_averages = np.sum(train_probabilities_array * avail_results, axis=1)
 train_averages = np.repeat(train_averages.reshape(train_probabilities_array.shape[0], 1), 8, axis=1)
 train_std = np.sum((train_averages - (avail_results * train_probabilities_array)) ** 2, axis=1)
-print train_std
+# print train_std
 # plt.hist(train_std)
 # plt.show()
-test_probabilities = pd.DataFrame.from_csv("a_meta_test_boost_classification.csv")
+test_probabilities = pd.DataFrame.from_csv("meta_class_test_boost.csv")
 
-std_threshhold = 225
+std_threshhold = 150
 below_thresh = train_std < std_threshhold
+print np.sum(below_thresh)
 above_thresh = train_std >= std_threshhold
+print np.sum(above_thresh)
 
 train_result = pd.DataFrame.from_csv("train_result.csv")
-print train_result
 # print train_result
 # print train_result['Response'].value_counts()
 col = list(train_result.columns.values)
@@ -128,11 +129,12 @@ train_result_abv_thrsh = train_result[above_thresh]
 base_splitter = np.arange(7) + 1.5
 
 train_prediction = pd.DataFrame.from_csv("meta_train_boost_regression_8_deep.csv")
-print train_prediction
+# print train_prediction
 # print pd.concat([train_probabilities, train_prediction], axis=1)
 train_prediction = np.array(train_prediction).ravel()
 
 train_prediction_blw_thrsh = train_prediction[below_thresh]
+# print zip(train_prediction_blw_thrsh, train_result_blw_thrsh)
 train_prediction_abv_thrsh = train_prediction[above_thresh]
 basecase_train = ranking(train_prediction, base_splitter)
 basecase_train_blw_thrsh = basecase_train[below_thresh]
@@ -145,10 +147,53 @@ test_prediction = np.array(test_prediction).ravel()
 basecase_test = ranking(test_prediction, base_splitter)
 test_value_count = np.array(pd.Series(basecase_test).value_counts())
 test_value_count = test_value_count.astype('float') / np.sum(test_value_count)
-print train_value_count
-print test_value_count
+# print train_value_count
+# print test_value_count
+#
+# print quadratic_weighted_kappa(train_result, basecase_train)
 
-print quadratic_weighted_kappa(train_result, basecase_train)
+x0_range = np.arange(-5, 6, 0.5)
+x1_range = np.arange(-1.5, 1.75, 0.25)
+x2_range = np.arange(-0.5, 0.6, 0.1)
+x3_range = np.arange(-0.1, 0.2, 0.1)
+bestcase = 0
+bestscore = 0
+
+print 'start cubic optimization for below %f std threshhold' % std_threshhold
+# optimize classifier
+for x0 in x0_range:
+    for x1 in x1_range:
+        for x2 in x2_range:
+            for x3 in x3_range:
+                case = np.array(ranking(train_prediction_blw_thrsh, (x0 + x1 * base_splitter + x2 * base_splitter**2 +
+                                                                     x3 * base_splitter**3))).astype('int')
+                score = quadratic_weighted_kappa(train_result_blw_thrsh, case)
+                if score > bestscore:
+                    bestscore = score
+                    bestcase = case
+                    print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2 +
+                                                           x3 * base_splitter**3)
+                    print 'Variables x0 = %f, x1 = %f, x2 = %f, x3 = %f' % (x0, x1, x2, x3)
+                    print 'The score is %f' % bestscore
+
+bestcase = 0
+bestscore = 0
+print 'start cubic optimization for above %f std threshhold' % std_threshhold
+# optimize classifier
+for x0 in x0_range:
+    for x1 in x1_range:
+        for x2 in x2_range:
+            for x3 in x3_range:
+                case = np.array(ranking(train_prediction_abv_thrsh, (x0 + x1 * base_splitter + x2 * base_splitter**2 +
+                                                                     x3 * base_splitter**3))).astype('int')
+                score = quadratic_weighted_kappa(train_result_abv_thrsh, case)
+                if score > bestscore:
+                    bestscore = score
+                    bestcase = case
+                    print 'For splitter ', (x0 + x1 * base_splitter + x2 * base_splitter**2 +
+                                                           x3 * base_splitter**3)
+                    print 'Variables x0 = %f, x1 = %f, x2 = %f, x3 = %f' % (x0, x1, x2, x3)
+                    print 'The score is %f' % bestscore
 
 
 def opt_cut_v2(x, *args):
@@ -158,10 +203,13 @@ def opt_cut_v2(x, *args):
     # print score
     return score
 
-res = optimize.minimize(opt_cut_v2, base_splitter, args=(train_prediction, train_result),
-                        method='Nelder-Mead', options={'disp': True})
-print res.x
-res = optimize.minimize(opt_cut_v2, base_splitter, args=(train_prediction_blw_thrsh, train_result_blw_thrsh),
+splitter = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477])
+riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
+
+# res = optimize.minimize(opt_cut_v2, splitter, args=(train_prediction, train_result),
+#                         method='Nelder-Mead', options={'disp': True})
+# print res.x
+res = optimize.minimize(opt_cut_v2, splitter, args=(train_prediction_blw_thrsh, train_result_blw_thrsh),
                         method='Nelder-Mead', options={'disp': True})
 print res.x
 case_train_blw_thrsh = ranking(train_prediction_blw_thrsh, res.x)
@@ -169,14 +217,13 @@ res = optimize.minimize(opt_cut_v2, base_splitter, args=(train_prediction_abv_th
                         method='Nelder-Mead', options={'disp': True})
 print res.x
 case_train_abv_thrsh = ranking(train_prediction_abv_thrsh, res.x)
+
 case_train = np.vstack((case_train_blw_thrsh.reshape(case_train_blw_thrsh.shape[0], 1),
                         case_train_abv_thrsh.reshape(case_train_abv_thrsh.shape[0], 1)))
 train_result = np.vstack((train_result_blw_thrsh.reshape(train_result_blw_thrsh.shape[0], 1),
                           train_result_abv_thrsh.reshape(train_result_abv_thrsh.shape[0], 1)))
 print quadratic_weighted_kappa(train_result, case_train)
 
-splitter = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477])
-riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
 param_grid = [
               {'risk': [1]}
              ]
