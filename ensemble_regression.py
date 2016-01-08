@@ -4,6 +4,7 @@ import numpy as np
 import glob
 from sklearn.linear_model import LinearRegression
 from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.cross_validation import StratifiedKFold
 import scipy.optimize as optimize
 
@@ -187,7 +188,8 @@ best_splitter = 0
 risk = 0.95
 
 regressor = LinearRegression(fit_intercept=True)
-regressor = SVR(verbose=True)
+regressor = RandomForestRegressor(n_estimators=200)
+# regressor = SVR(verbose=True)
 param_grid = [
               {'risk': [1]}
              ]
@@ -233,7 +235,7 @@ for params in ParameterGrid(param_grid):
         it_splitter = np.array(it_splitter)
         best_splitter = np.average(it_splitter, axis=0)
 
-pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions.csv')
+pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_RF.csv')
 splitter = opt_cut_global(predicted_results, y_test)
 # train machine learning
 res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
@@ -245,8 +247,6 @@ splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitte
 regressor.fit(train, train_result)
 # print 'The regression coefs are:'
 # print regressor.coef_, regressor.intercept_
-# print 'the best risk is: %f' % best_risk
-print 'the best quadratic weighted kappa is: %f' % best_score
 # predict
 predicted_results = regressor.predict(test)
 
@@ -259,9 +259,9 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_SVR.csv")
+submission_file.to_csv("ensemble_RF.csv")
 
 # added best splitter from CV
 # nn_class + RF 20, 30, 40
-# Linear Regression: 0.667607
+# Linear Regression: 0.675018
 # SVR:
