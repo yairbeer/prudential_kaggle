@@ -188,7 +188,7 @@ best_splitter = 0
 risk = 0.95
 
 regressor = LinearRegression(fit_intercept=True)
-regressor = RandomForestRegressor(n_estimators=200)
+# regressor = RandomForestRegressor(n_estimators=200)
 # regressor = SVR(verbose=True)
 param_grid = [
               {'risk': [1]}
@@ -199,7 +199,7 @@ for params in ParameterGrid(param_grid):
     print params
 
     # CV
-    cv_n = 12
+    cv_n = 8
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
     it_splitter = []
     metric = []
@@ -241,7 +241,8 @@ splitter = opt_cut_global(predicted_results, y_test)
 res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
                         # options={'disp': True}
                         )
-# print res.x
+classified_predicted_results = np.array(ranking(predicted_results, res.x)).astype('int')
+print quadratic_weighted_kappa(y_test, classified_predicted_results, 1, 8)
 splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
 # print cur_splitter
 regressor.fit(train, train_result)
@@ -259,9 +260,10 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_RF.csv")
+submission_file.to_csv("ensemble_LR.csv")
 
-# added best splitter from CV
-# nn_class + RF 20, 30, 40
+# added best splitter from CV = 8
+# nn_class + RF 20, 30, 40, 50
 # Linear Regression: 0.675018
+# RFR:
 # SVR:
