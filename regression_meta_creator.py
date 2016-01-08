@@ -134,6 +134,12 @@ test = stding.transform(test)
 # 4th
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
+              # {'n_estimators': [400], 'max_depth': [20], 'max_features': [0.4],
+              #  'min_samples_split': [2]},
+              # {'n_estimators': [400], 'max_depth': [30], 'max_features': [0.4],
+              #  'min_samples_split': [2]},
+              {'n_estimators': [400], 'max_depth': [40], 'max_features': [0.4],
+               'min_samples_split': [2]},
               {'n_estimators': [400], 'max_depth': [50], 'max_features': [0.4],
                'min_samples_split': [2]}
              ]
@@ -160,10 +166,10 @@ for params in ParameterGrid(param_grid):
         predicted_results = regressor.predict(X_test)
         meta_train[test_index] = predicted_results
         classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
-        predicted_results += 0.5
-        predicted_results = np.floor(predicted_results).astype('int')
-        predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
-        predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
+        # predicted_results += 0.5
+        # predicted_results = np.floor(predicted_results).astype('int')
+        # predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
+        # predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
         # print pd.Series(predicted_results).value_counts()
         # print pd.Series(y_test).value_counts()
         print quadratic_weighted_kappa(y_test, classified_predicted_results)

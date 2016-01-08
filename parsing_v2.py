@@ -88,7 +88,7 @@ trainset = pd.DataFrame.from_csv('train.csv', index_col=0)
 train_result = trainset['Response']
 
 # print train_result.value_counts()
-# train_result.to_csv("train_result.csv")
+train_result.to_csv("train_result.csv")
 
 trainset_cols = list(trainset.columns.values)
 trainset = trainset.drop('Response', axis=1)
@@ -164,5 +164,5 @@ train = train[col_common]
 test = test[col_common]
 
 print 'write to data'
-# train.to_csv("train_dummied_v2.csv")
-# test.to_csv("test_dummied_v2.csv")
+train.to_csv("train_dummied_v2.csv")
+test.to_csv("test_dummied_v2.csv")

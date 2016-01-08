@@ -1,9 +1,9 @@
 from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
-import xgboostlib.xgboost as xgboost
 import glob
-from sklearn.linear_model import Lasso, LinearRegression
+from sklearn.linear_model import LinearRegression
+from sklearn.svm import SVR
 from sklearn.cross_validation import StratifiedKFold
 import scipy.optimize as optimize
 
@@ -123,6 +123,7 @@ train_result = np.array(train_result).ravel()
 
 # combining meta_estimators
 train = glob.glob('meta_train*')
+train = sorted(train)
 print train
 for i in range(len(train)):
     train[i] = pd.DataFrame.from_csv(train[i])
@@ -130,6 +131,7 @@ train = pd.concat(train, axis=1)
 train = np.array(train)
 
 test = glob.glob('meta_test*')
+test = sorted(test)
 print test
 for i in range(len(test)):
     test[i] = pd.DataFrame.from_csv(test[i])
@@ -146,9 +148,36 @@ splitter = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844,
 riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
 
 
-def opt_cut_v2_cv(x):
-    case = np.array(ranking(predicted_results, x)).astype('int')
-    score = -1 * quadratic_weighted_kappa(y_test, case, 1, 8)
+def opt_cut_global(predictions, results):
+    print 'start quadratic splitter optimization'
+    x0_range = np.arange(0, 5.25, 0.25)
+    x1_range = np.arange(0, 1.5, 0.15)
+    x2_range = np.arange(-0.15, 0.2, 0.05)
+    riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
+    bestcase = np.array(ranking(predictions, riskless_splitter)).astype('int')
+    bestscore = quadratic_weighted_kappa(results, bestcase)
+    print ('The starting score is %f' % bestscore)
+
+    # optimize classifier
+    for x0 in x0_range:
+        for x1 in x1_range:
+            for x2 in x2_range:
+                case = np.array(ranking(predictions, (x0 + x1 * riskless_splitter + x2 *
+                                                      riskless_splitter**2))).astype('int')
+                score = quadratic_weighted_kappa(results, case, 1, 8)
+                if score > bestscore:
+                    bestscore = score
+                    best_splitter = x0 + x1 * riskless_splitter + x2 * riskless_splitter**2
+                    print 'For splitter ', (x0 + x1 * riskless_splitter + x2 * riskless_splitter**2)
+                    print 'Variables x0 = %f, x1 = %f, x2 = %f' % (x0, x1, x2)
+                    print 'The score is %f' % bestscore
+    return best_splitter
+
+
+def opt_cut_local(x, *args):
+    predictions, results = args
+    case = np.array(ranking(predictions, x)).astype('int')
+    score = -1 * quadratic_weighted_kappa(results, case, 1, 8)
     # print score
     return score
 
@@ -158,6 +187,7 @@ best_splitter = 0
 risk = 0.95
 
 regressor = LinearRegression(fit_intercept=True)
+regressor = SVR(verbose=True)
 param_grid = [
               {'risk': [1]}
              ]
@@ -171,6 +201,7 @@ for params in ParameterGrid(param_grid):
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
     it_splitter = []
     metric = []
+    train_test_predictions = np.ones((train.shape[0],))
     for train_index, test_index in kf:
         X_train, X_test = train[train_index, :], train[test_index, :]
         y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
@@ -180,11 +211,10 @@ for params in ParameterGrid(param_grid):
 
         # predict
         predicted_results = regressor.predict(X_test)
-        case = np.array(ranking(predicted_results, [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844,
-                                                    6.17412558, 6.79373477])).astype('int')
+        train_test_predictions[test_index] = predicted_results
+        splitter = opt_cut_global(predicted_results, y_test)
         # train machine learning
-        res = optimize.minimize(opt_cut_v2_cv, [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844,
-                                                6.17412558, 6.79373477], method='Nelder-Mead',
+        res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
                                 # options={'disp': True}
                                 )
         # print res.x
@@ -203,16 +233,25 @@ for params in ParameterGrid(param_grid):
         it_splitter = np.array(it_splitter)
         best_splitter = np.average(it_splitter, axis=0)
 
+pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions.csv')
+splitter = opt_cut_global(predicted_results, y_test)
+# train machine learning
+res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
+                        # options={'disp': True}
+                        )
+# print res.x
+splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
+# print cur_splitter
 regressor.fit(train, train_result)
-print 'The regression coefs are:'
-print regressor.coef_, regressor.intercept_
-print 'the best risk is: %f' % best_risk
+# print 'The regression coefs are:'
+# print regressor.coef_, regressor.intercept_
+# print 'the best risk is: %f' % best_risk
 print 'the best quadratic weighted kappa is: %f' % best_score
 # predict
 predicted_results = regressor.predict(test)
 
 final_splitter = list(splitter * best_risk + riskless_splitter * (1 - best_risk))
-
+print final_splitter
 print 'writing to file'
 classed_results = np.array(ranking(predicted_results, final_splitter)).astype('int')
 submission_file = pd.DataFrame.from_csv("sample_submission.csv")
@@ -220,31 +259,9 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_linear_regression.csv")
+submission_file.to_csv("ensemble_SVR.csv")
 
-# class + reg, dum + not dummy
-
-# regression
-# only bossting regressor, no intercept: 0.662372196259
-# only bossting regressor, with intercept: 0.662542431915
-# only bossting regressor + class, no intercept: 0.66344342224, works bad on test
-# only bossting regressor + class, with intercept: 0.663248699375
-
-# added linear regression
-# only bossting regressor + linear, with intercept: 0.662427982667
-
-# added nedler mead optimized spliter: 0.666313598761
-
-# added RF depth = 10: 0.663928238356
-# added RF depth = 20: 0.664636681173
-
-# added risk
-
-# added RF depth = 30, risk = 1: 0.668113299164
-
-# moved to n_CV = 12
-# risk = 1, QWK = 0.667689
-
-# added RF depth = 40, risk = 1: 0.668522
-
-# added best splitter from CV, nelder mead opt splitter was better
+# added best splitter from CV
+# nn_class + RF 20, 30, 40
+# Linear Regression: 0.667607
+# SVR:

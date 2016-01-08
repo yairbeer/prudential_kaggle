@@ -103,7 +103,8 @@ def ranking(predictions, split_index):
     return ranked_predictions
 
 train_result = pd.DataFrame.from_csv("train_result.csv")
-print train_result['Response'].value_counts()
+print (train_result['Response'].value_counts())
+train_result_dum = np.array(pd.get_dummies(train_result['Response']))
 
 col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
@@ -120,7 +121,6 @@ test = np.array(test)
 
 
 # print train_result.shape[1], ' categorial'
-print train.shape[1], ' columns'
 
 # Standardizing
 stding = StandardScaler()
@@ -140,59 +140,57 @@ param_grid = [
               {'n_estimators': [400], 'max_depth': [10], 'max_features': [0.4],
                'min_samples_split': [2]}
              ]
-
+batch = 50
+n_epoch = 30
 # print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
     # CV
+    cv_n = 10
+    kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
+
     model = Sequential()
-    model.add(Dense(64, input_dim=input_cols, init='uniform'))
+    # Dense(64) is a fully-connected layer with 64 hidden units.
+    # in the first layer, you must specify the expected input data shape:
+    model.add(Dense(64, init='uniform', input_dim=input_cols))
     model.add(Activation('tanh'))
     model.add(Dropout(0.5))
     model.add(Dense(64, init='uniform'))
     model.add(Activation('tanh'))
     model.add(Dropout(0.5))
-    model.add(Dense(30, init='uniform'))
+    model.add(Dense(8, init='uniform'))
     model.add(Activation('softmax'))
 
-    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='mean_squared_error', optimizer=sgd)
+    sgd = SGD(lr=0.003, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd)
 
-    cv_n = 2
-    kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
-
-    meta_train = np.ones((train.shape[0],))
+    meta_train = np.ones((train.shape[0], 8))
     metric = []
     for train_index, test_index in kf:
         X_train, X_test = train[train_index, :], train[test_index, :]
-        y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
+        y_train, y_test = train_result_dum[train_index, :], train_result_dum[test_index, :]
         # train machine learning
-        model.fit(X_train, y_train, nb_epoch=20, batch_size=16)
-        score = model.evaluate(X_test, y_test, batch_size=16)
+
+        model.fit(X_train, y_train, nb_epoch=n_epoch, batch_size=batch, verbose=1, validation_split=0.1)
+        score = model.evaluate(X_test, y_test)
         metric.append(score)
-        # # predict
-        # predicted_results = regressor.predict(X_test)
-        # meta_train[test_index] = predicted_results
-        # classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
-        # predicted_results += 0.5
-        # predicted_results = np.floor(predicted_results).astype('int')
-        # predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
-        # predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-        # # print pd.Series(predicted_results).value_counts()
-        # # print pd.Series(y_test).value_counts()
-        # print quadratic_weighted_kappa(y_test, classified_predicted_results)
-        # # print quadratic_weighted_kappa(y_test, predicted_results)
-        # metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
+        # predict
+        predicted_results = model.predict(X_test, batch_size=batch, verbose=1)
+        meta_train[test_index] = predicted_results
+        predicted_results = np.argmax(predicted_results, axis=1) + 1
+        classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
+        # print pd.Series(classified_predicted_results).value_counts()
+        # print pd.Series(y_test).value_counts()
+        print (quadratic_weighted_kappa(train_result[test_index].ravel(), classified_predicted_results))
+        metric.append(quadratic_weighted_kappa(train_result[test_index].ravel(), classified_predicted_results))
 
-    print 'The quadratic weighted kappa is: ', np.mean(metric)
+    print ('The quadratic weighted kappa is: ', np.mean(metric))
 
-    pd.DataFrame(meta_train).to_csv('meta_train_RF_depth%d_regression.csv' % params['max_depth'])
+    pd.DataFrame(meta_train).to_csv('meta_train_NN.csv')
     # train machine learning
 
-    # regressor.fit(train, train_result)
-
-    # predict
-    # predicted_results = regressor.predict(test)
-    # pd.DataFrame(predicted_results).to_csv('meta_test_RF_depth%d_regression.csv' % params['max_depth'])
+    model.fit(train, train_result_dum, nb_epoch=n_epoch, batch_size=batch, verbose=1)
+    predicted_results = model.predict(test, batch_size=batch, verbose=1)
+    pd.DataFrame(predicted_results).to_csv('meta_test_NN.csv')
 
 
