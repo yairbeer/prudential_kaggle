@@ -2,7 +2,7 @@ from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-import xgboostlib.xgboost as xgboost
+import xgboost
 from sklearn.cross_validation import StratifiedKFold
 
 __author__ = 'YBeer'
@@ -135,7 +135,13 @@ test = stding.transform(test_arr)
 splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 param_grid = [
               {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
-               'objective': ['reg:linear'], 'max_depth': [8], 'num_round': [800], 'fit_const': [0.5],
+               'objective': ['reg:linear'], 'max_depth': [3], 'num_round': [1500], 'fit_const': [0.5],
+               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [5], 'num_round': [1000], 'fit_const': [0.5],
+               'subsample': [0.75]},
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
+               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [850], 'fit_const': [0.5],
                'subsample': [0.75]},
               {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.03],
                'objective': ['reg:linear'], 'max_depth': [9], 'num_round': [400], 'fit_const': [0.5],
