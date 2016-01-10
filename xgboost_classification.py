@@ -2,7 +2,7 @@ from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-import xgboostlib.xgboost as xgboost
+import xgboost
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.metrics import log_loss
 
@@ -123,7 +123,7 @@ train = stding.fit_transform(train_arr)
 test = stding.transform(test_arr)
 
 param_grid = [
-              {'silent': [1], 'nthread': [3], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
+              {'silent': [1], 'nthread': [1], 'num_class': [8], 'eval_metric': ['mlogloss'], 'eta': [0.03],
                'objective': ['multi:softprob'], 'max_depth': [7], 'num_round': [600],
                'subsample': [0.75]}
              ]
@@ -137,7 +137,7 @@ print 'start CV'
 for params in ParameterGrid(param_grid):
     print params
     # CV
-    cv_n = 10
+    cv_n = 12
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
     meta_train = np.ones((train_arr.shape[0], 8))

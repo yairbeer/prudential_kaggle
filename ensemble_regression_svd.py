@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import glob
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.cross_validation import StratifiedKFold
@@ -187,9 +189,18 @@ best_score = 0
 best_splitter = 0
 risk = 0.95
 
+scaler = StandardScaler()
+decomposer = PCA(n_components=5)
+
+train = scaler.fit_transform(train)
+test = scaler.transform(test)
+
+train = decomposer.fit_transform(train)
+test = decomposer.transform(test)
+
 regressor = LinearRegression(fit_intercept=True)
-regressor = RandomForestRegressor(n_estimators=400, max_depth=7)
-# regressor = SVR(verbose=True)
+# regressor = RandomForestRegressor(n_estimators=400, max_depth=7)
+regressor = SVR(verbose=True)
 param_grid = [
               {'risk': [1]}
              ]
@@ -235,7 +246,7 @@ for params in ParameterGrid(param_grid):
         it_splitter = np.array(it_splitter)
         best_splitter = np.average(it_splitter, axis=0)
 
-pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_RF.csv')
+pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_PCA_SVR.csv')
 splitter = opt_cut_global(predicted_results, y_test)
 # train machine learning
 res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
@@ -248,8 +259,6 @@ res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test
                         # options={'disp': True}
                         )
 regressor.fit(train, train_result)
-# print 'The regression coefs are:'
-# print regressor.coef_, regressor.intercept_
 # predict
 predicted_results = regressor.predict(test)
 
@@ -262,10 +271,9 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_RF.csv")
+submission_file.to_csv("ensemble_PCA_SVR.csv")
 
 # added best splitter from CV = 8
 # nn_class + RF 20, 30, 40, 50
-# Linear Regression: 0.6811113032, LB: 0.66413
-# RFR: 0.671622344807, LB: 0.66708
-# SVR:
+# Linear Regression: 0.686113147559, LB: 0.66414
+# SVR n=5:
