@@ -2,7 +2,7 @@ from sklearn.grid_search import ParameterGrid
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-import xgboost
+import xgboostlib.xgboost as xgboost
 from sklearn.cross_validation import StratifiedKFold
 
 __author__ = 'YBeer'
@@ -107,13 +107,13 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
-train.fillna(999)
+train = pd.DataFrame.from_csv("train_dummied_v3.csv").astype('float')
+train.fillna(-1)
 train_arr = np.array(train)
 col_list = list(train.columns.values)
 
-test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
-test.fillna(999)
+test = pd.DataFrame.from_csv("test_dummied_v3.csv").astype('float')
+test.fillna(-1)
 test_arr = np.array(test)
 
 
@@ -179,15 +179,15 @@ for params in ParameterGrid(param_grid):
         predicted_results = np.floor(predicted_results).astype('int')
         predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
         predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
-        print pd.Series(predicted_results).value_counts()
-        print pd.Series(y_test).value_counts()
-        print quadratic_weighted_kappa(y_test, classified_predicted_results)
-        print quadratic_weighted_kappa(y_test, predicted_results)
+        # print pd.Series(predicted_results).value_counts()
+        # print pd.Series(y_test).value_counts()
+        # print quadratic_weighted_kappa(y_test, classified_predicted_results)
+        # print quadratic_weighted_kappa(y_test, predicted_results)
         metric.append(quadratic_weighted_kappa(y_test, classified_predicted_results))
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
 
-    pd.DataFrame(meta_train).to_csv('meta_train_boost_regression_%d_deep.csv' % params['max_depth'])
+    pd.DataFrame(meta_train).to_csv('meta_train_boost_regression_%d_deep_v3.csv' % params['max_depth'])
     # train machine learning
     xg_train = xgboost.DMatrix(train_arr, label=train_result)
     xg_test = xgboost.DMatrix(test_arr)
@@ -199,6 +199,6 @@ for params in ParameterGrid(param_grid):
 
     # predict
     predicted_results = xgclassifier.predict(xg_test)
-    pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_%d_deep.csv' % params['max_depth'])
+    pd.DataFrame(predicted_results).to_csv('meta_test_boost_regression_%d_deep_v3.csv' % params['max_depth'])
 
 

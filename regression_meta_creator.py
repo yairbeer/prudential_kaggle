@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.cross_validation import StratifiedKFold
 
 __author__ = 'YBeer'
@@ -107,13 +108,13 @@ col = list(train_result.columns.values)
 result_ind = list(train_result[col[0]].value_counts().index)
 train_result = np.array(train_result).ravel()
 
-train = pd.DataFrame.from_csv("train_dummied_v2.csv").astype('float')
-train.fillna(999)
+train = pd.DataFrame.from_csv("train_dummied_v3.csv").astype('float')
+train.fillna(-1)
 col_list = list(train.columns.values)
 train = np.array(train)
 
-test = pd.DataFrame.from_csv("test_dummied_v2.csv").astype('float')
-test.fillna(999)
+test = pd.DataFrame.from_csv("test_dummied_v3.csv").astype('float')
+test.fillna(-1)
 test = np.array(test)
 
 
@@ -121,9 +122,9 @@ test = np.array(test)
 print train.shape[1], ' columns'
 
 # Standardizing
-stding = StandardScaler()
-train = stding.fit_transform(train)
-test = stding.transform(test)
+# stding = StandardScaler()
+# train = stding.fit_transform(train)
+# test = stding.transform(test)
 
 # # Linear best
 # splitter = [1.85, 2.75, 3.65, 4.55, 5.45, 6.35, 7.25]
@@ -138,8 +139,8 @@ param_grid = [
               #  'min_samples_split': [2]},
               # {'n_estimators': [400], 'max_depth': [30], 'max_features': [0.4],
               #  'min_samples_split': [2]},
-              {'n_estimators': [400], 'max_depth': [40], 'max_features': [0.4],
-               'min_samples_split': [2]},
+              # {'n_estimators': [400], 'max_depth': [40], 'max_features': [0.4],
+              #  'min_samples_split': [2]},
               {'n_estimators': [400], 'max_depth': [50], 'max_features': [0.4],
                'min_samples_split': [2]}
              ]
@@ -151,6 +152,7 @@ for params in ParameterGrid(param_grid):
     regressor = RandomForestRegressor(n_estimators=params['n_estimators'], max_depth=params['max_depth'],
                                       max_features=params['max_features'],
                                       min_samples_split=params['min_samples_split'])
+    regressor = LinearRegression()
     cv_n = 12
     kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
 
@@ -178,13 +180,13 @@ for params in ParameterGrid(param_grid):
 
     print 'The quadratic weighted kappa is: ', np.mean(metric)
 
-    pd.DataFrame(meta_train).to_csv('meta_train_RF_depth%d_regression.csv' % params['max_depth'])
+    pd.DataFrame(meta_train).to_csv('meta_train_LR.csv')
     # train machine learning
 
     regressor.fit(train, train_result)
 
     # predict
     predicted_results = regressor.predict(test)
-    pd.DataFrame(predicted_results).to_csv('meta_test_RF_depth%d_regression.csv' % params['max_depth'])
+    pd.DataFrame(predicted_results).to_csv('meta_test_LR.csv')
 
 
