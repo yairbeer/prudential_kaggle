@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import glob
 from sklearn.linear_model import LinearRegression
+import xgboostlib.xgboost as xgboost
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.cross_validation import StratifiedKFold
@@ -145,7 +146,7 @@ print train.shape[1], ' columns'
 # 4th
 # splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
 # nelder mead opt
-splitter = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477])
+splitter_old = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477])
 riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
 
 
@@ -153,7 +154,7 @@ def opt_cut_global(predictions, results):
     print 'start quadratic splitter optimization'
     x0_range = np.arange(0, 5.25, 0.25)
     x1_range = np.arange(0, 1.5, 0.15)
-    x2_range = np.arange(-0.14, 0.02, 0.02)
+    x2_range = np.arange(-0.15, 0.01, 0.01)
     riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
     bestcase = np.array(ranking(predictions, riskless_splitter)).astype('int')
     bestscore = quadratic_weighted_kappa(results, bestcase)
@@ -185,13 +186,11 @@ def opt_cut_local(x, *args):
 best_risk = 0
 best_score = 0
 best_splitter = 0
-risk = 0.95
 
-regressor = LinearRegression(fit_intercept=True)
-# regressor = RandomForestRegressor(n_estimators=400, max_depth=7)
-# regressor = SVR(verbose=True)
 param_grid = [
-              {'risk': [1]}
+              {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.01],
+               'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [500], 'fit_const': [0.5],
+               'subsample': [0.75], 'risk': [1.0]}
              ]
 
 print 'start CV'
@@ -208,11 +207,16 @@ for params in ParameterGrid(param_grid):
         X_train, X_test = train[train_index, :], train[test_index, :]
         y_train, y_test = train_result[train_index].ravel(), train_result[test_index].ravel()
         # train machine learning
+        xg_train = xgboost.DMatrix(X_train, label=y_train)
+        xg_test = xgboost.DMatrix(X_test, label=y_test)
 
-        regressor.fit(X_train, y_train)
+        watchlist = [(xg_train, 'train'), (xg_test, 'test')]
+
+        num_round = params['num_round']
+        xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
 
         # predict
-        predicted_results = regressor.predict(X_test)
+        predicted_results = xgclassifier.predict(xg_test)
         train_test_predictions[test_index] = predicted_results
         splitter = opt_cut_global(predicted_results, y_test)
         # train machine learning
@@ -235,7 +239,7 @@ for params in ParameterGrid(param_grid):
         it_splitter = np.array(it_splitter)
         best_splitter = np.average(it_splitter, axis=0)
 
-pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_LR_noclass_v3.csv')
+pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_xgboost_v3.csv')
 print 'Calculating final splitter'
 splitter = opt_cut_global(train_test_predictions, train_result)
 # train machine learning
@@ -246,28 +250,29 @@ classified_predicted_results = np.array(ranking(train_test_predictions, res.x)).
 print quadratic_weighted_kappa(train_result, classified_predicted_results, 1, 8)
 splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
 
-regressor.fit(train, train_result)
-# print 'The regression coefs are:'
-# print regressor.coef_, regressor.intercept_
+# train machine learning
+xg_train = xgboost.DMatrix(train, label=train_result)
+xg_test = xgboost.DMatrix(test)
+
+watchlist = [(xg_train, 'train')]
+
+num_round = params['num_round']
+
+xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
+
 # predict
-predicted_results = regressor.predict(test)
+predicted_results = xgclassifier.predict(xg_test)
 
-
-final_splitter = list(res.x * best_risk + riskless_splitter * (1 - best_risk))
-print final_splitter
+print splitter
 print 'writing to file'
-classed_results = np.array(ranking(predicted_results, final_splitter)).astype('int')
+classed_results = np.array(ranking(predicted_results, splitter)).astype('int')
 submission_file = pd.DataFrame.from_csv("sample_submission.csv")
 submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_LR_noclass_v3.csv")
+submission_file.to_csv("ensemble_xgboost_v3.csv")
 
 # added best splitter, CV = 8, parsing V3
-# Linear Regression: 0.669959058956, LB: 0.66615
-# RFR: 0.669285980007, LB: 0.66600
-
-# No NN
-# Linear Regression: , LB:
-# RFR: , LB:
+# GBtree: , LB:
+# GBlinear: , LB:

@@ -175,10 +175,6 @@ for params in ParameterGrid(param_grid):
         predicted_results = xgclassifier.predict(xg_test)
         meta_train[test_index] = predicted_results
         classified_predicted_results = np.array(ranking(predicted_results, splitter)).astype('int')
-        predicted_results += params['fit_const']
-        predicted_results = np.floor(predicted_results).astype('int')
-        predicted_results = predicted_results * (1 * predicted_results > 0) + 1 * (predicted_results < 1)
-        predicted_results = predicted_results * (1 * predicted_results < 9) + 8 * (predicted_results > 8)
         # print pd.Series(predicted_results).value_counts()
         # print pd.Series(y_test).value_counts()
         # print quadratic_weighted_kappa(y_test, classified_predicted_results)
