@@ -262,7 +262,7 @@ xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-
+splitter = splitter_old
 print splitter
 print 'writing to file'
 classed_results = np.array(ranking(predicted_results, splitter)).astype('int')
@@ -271,8 +271,16 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_xgboost_v3.csv")
+submission_file.to_csv("ensemble_xgboost_oldsplitter_v3.csv")
 
 # added best splitter, CV = 8, parsing V3
-# GBtree: , LB:
+# GBtree: 0.671535486579, LB: 0.66722
+# 8    5454
+# 7    3536
+# 5    2689
+# 6    2287
+# 4    1784
+# 1    1727
+# 2    1274
+# 3    1014
 # GBlinear: , LB:

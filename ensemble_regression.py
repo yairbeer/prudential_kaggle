@@ -153,7 +153,7 @@ def opt_cut_global(predictions, results):
     print 'start quadratic splitter optimization'
     x0_range = np.arange(0, 5.25, 0.25)
     x1_range = np.arange(0, 1.5, 0.15)
-    x2_range = np.arange(-0.14, 0.02, 0.02)
+    x2_range = np.arange(-0.15, 0.01, 0.01)
     riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
     bestcase = np.array(ranking(predictions, riskless_splitter)).astype('int')
     bestscore = quadratic_weighted_kappa(results, bestcase)
