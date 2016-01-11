@@ -188,7 +188,7 @@ best_splitter = 0
 risk = 0.95
 
 regressor = LinearRegression(fit_intercept=True)
-# regressor = RandomForestRegressor(n_estimators=400, max_depth=7)
+regressor = RandomForestRegressor(n_estimators=400, max_depth=7)
 # regressor = SVR(verbose=True)
 param_grid = [
               {'risk': [1]}
@@ -236,6 +236,7 @@ for params in ParameterGrid(param_grid):
         best_splitter = np.average(it_splitter, axis=0)
 
 pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_RF.csv')
+print 'Calculating final splitter'
 splitter = opt_cut_global(train_test_predictions, train_result)
 # train machine learning
 res = optimize.minimize(opt_cut_local, splitter, args=(train_test_predictions, train_result), method='Nelder-Mead',
@@ -261,15 +262,9 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_LR_v3.csv")
+submission_file.to_csv("ensemble_RF_v3.csv")
 
-# added best splitter from CV = 8
-# nn_class + RF 20, 30, 40, 50
-# Linear Regression: 0.6811113032, LB: 0.66413
-# RFR: 0.671622344807, LB: 0.66708
-# SVR:
-
-# parsing V3
-# Linear Regression: , LB:
+# added best splitter, CV = 8, parsing V3
+# Linear Regression: 0.669959058956, LB: 0.66615
 # RFR: , LB:
 # SVR:
