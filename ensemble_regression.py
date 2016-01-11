@@ -262,7 +262,7 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_RF.csv")
+submission_file.to_csv("ensemble_LR_v2.csv")
 
 # added best splitter from CV = 8
 # nn_class + RF 20, 30, 40, 50
