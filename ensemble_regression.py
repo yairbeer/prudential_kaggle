@@ -236,22 +236,21 @@ for params in ParameterGrid(param_grid):
         best_splitter = np.average(it_splitter, axis=0)
 
 pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_RF.csv')
-splitter = opt_cut_global(predicted_results, y_test)
+splitter = opt_cut_global(train_test_predictions, train_result)
 # train machine learning
-res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
+res = optimize.minimize(opt_cut_local, splitter, args=(train_test_predictions, train_result), method='Nelder-Mead',
                         # options={'disp': True}
                         )
-classified_predicted_results = np.array(ranking(predicted_results, res.x)).astype('int')
-print quadratic_weighted_kappa(y_test, classified_predicted_results, 1, 8)
+classified_predicted_results = np.array(ranking(train_test_predictions, res.x)).astype('int')
+print quadratic_weighted_kappa(train_result, classified_predicted_results, 1, 8)
 splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
-res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
-                        # options={'disp': True}
-                        )
+
 regressor.fit(train, train_result)
 # print 'The regression coefs are:'
 # print regressor.coef_, regressor.intercept_
 # predict
 predicted_results = regressor.predict(test)
+
 
 final_splitter = list(res.x * best_risk + riskless_splitter * (1 - best_risk))
 print final_splitter
@@ -271,3 +270,6 @@ submission_file.to_csv("ensemble_LR_v3.csv")
 # SVR:
 
 # parsing V3
+# Linear Regression: , LB:
+# RFR: , LB:
+# SVR:
