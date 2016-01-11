@@ -188,7 +188,7 @@ best_splitter = 0
 risk = 0.95
 
 regressor = LinearRegression(fit_intercept=True)
-regressor = RandomForestRegressor(n_estimators=400, max_depth=7)
+# regressor = RandomForestRegressor(n_estimators=400, max_depth=7)
 # regressor = SVR(verbose=True)
 param_grid = [
               {'risk': [1]}
@@ -262,10 +262,12 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_LR_v2.csv")
+submission_file.to_csv("ensemble_LR_v3.csv")
 
 # added best splitter from CV = 8
 # nn_class + RF 20, 30, 40, 50
 # Linear Regression: 0.6811113032, LB: 0.66413
 # RFR: 0.671622344807, LB: 0.66708
 # SVR:
+
+# parsing V3
