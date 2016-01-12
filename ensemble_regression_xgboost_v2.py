@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 import xgboostlib.xgboost as xgboost
 from sklearn.svm import SVR
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.cross_validation import StratifiedKFold
+from sklearn.cross_validation import StratifiedKFold, KFold
 import scipy.optimize as optimize
 
 __author__ = 'YBeer'
@@ -155,7 +155,6 @@ def opt_cut_global(predictions, results):
     x0_range = np.arange(0, 4.25, 0.25)
     x1_range = np.arange(0.6, 1.5, 0.15)
     x2_range = np.arange(-0.08, 0.01, 0.01)
-    riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
     bestcase = np.array(ranking(predictions, riskless_splitter)).astype('int')
     bestscore = quadratic_weighted_kappa(results, bestcase)
     print ('The starting score is %f' % bestscore)
@@ -190,7 +189,7 @@ best_splitter = 0
 param_grid = [
               {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.01],
                'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [600], 'fit_const': [0.5],
-               'subsample': [0.75], 'risk': [0.9]}
+               'subsample': [0.75], 'risk': [0.5, 0.7, 0.9, 1]}
              ]
 
 print 'start CV'
@@ -199,7 +198,7 @@ for params in ParameterGrid(param_grid):
 
     # CV
     cv_n = 8
-    kf = StratifiedKFold(train_result, n_folds=cv_n, shuffle=True)
+    kf = KFold(train.shape[0], n_folds=cv_n, shuffle=True)
     it_splitter = []
     metric = []
     train_test_predictions = np.ones((train.shape[0],))
@@ -265,9 +264,10 @@ xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-# pd.DataFrame(predicted_results).to_csv('ensemble_test_predictions_xgboost_v3.csv')
+pd.DataFrame(predicted_results).to_csv('ensemble_test_predictions_xgboost_v3.csv')
 
 predicted_self_results = xgclassifier.predict(xg_train)
+pd.DataFrame(predicted_results).to_csv('ensemble_train_predictions_xgboost_v3.csv')
 splitter = opt_cut_global(predicted_self_results, train_result)
 res = optimize.minimize(opt_cut_local, splitter, args=(predicted_self_results, train_result), method='Nelder-Mead',
                         options={'disp': True}
@@ -281,7 +281,7 @@ submission_file['Response'] = classed_results
 
 print submission_file['Response'].value_counts()
 
-submission_file.to_csv("ensemble_xgboost_oldsplitter_v3.csv")
+submission_file.to_csv("ensemble_xgboost_kfold_v4.csv")
 
 # added best splitter, CV = 8, parsing V3
 
@@ -318,4 +318,9 @@ submission_file.to_csv("ensemble_xgboost_oldsplitter_v3.csv")
 # 2    1600
 # 1    1064
 
-# need to check non startified k-fold
+# train fit best splitter:
+# LB:
+# StratifiedKFold
+# risk=0.9: 0.66949
+# K-Fold
+# risk=:
