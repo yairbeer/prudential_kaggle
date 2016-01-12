@@ -116,11 +116,45 @@ def ranking(predictions, split_index):
     return ranked_predictions
 
 
+train_result = pd.DataFrame.from_csv("train_result.csv")
+# print train_result['Response'].value_counts()
+
+col = list(train_result.columns.values)
+result_ind = list(train_result[col[0]].value_counts().index)
+train_result = np.array(train_result).ravel()
+
+# combining meta_estimators
+train = glob.glob('meta_train*')
+train = sorted(train)
+print train
+for i in range(len(train)):
+    train[i] = pd.DataFrame.from_csv(train[i])
+train = pd.concat(train, axis=1)
+train = np.array(train)
+
+test = glob.glob('meta_test*')
+test = sorted(test)
+print test
+for i in range(len(test)):
+    test[i] = pd.DataFrame.from_csv(test[i])
+test = pd.concat(test, axis=1)
+test = np.array(test)
+
+# print train_result.shape[1], ' categorial'
+print train.shape[1], ' columns'
+
+# 4th
+# splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
+# nelder mead opt
+splitter_old = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477])
+riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
+
+
 def opt_cut_global(predictions, results):
     print 'start quadratic splitter optimization'
-    x0_range = np.arange(0, 5.25, 0.25)
-    x1_range = np.arange(0, 1.5, 0.15)
-    x2_range = np.arange(-0.15, 0.01, 0.01)
+    x0_range = np.arange(0, 4.25, 0.25)
+    x1_range = np.arange(0.6, 1.5, 0.15)
+    x2_range = np.arange(-0.08, 0.01, 0.01)
     riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
     bestcase = np.array(ranking(predictions, riskless_splitter)).astype('int')
     bestscore = quadratic_weighted_kappa(results, bestcase)
@@ -149,22 +183,6 @@ def opt_cut_local(x, *args):
     # print score
     return score
 
-train_result = pd.DataFrame.from_csv("train_result.csv")
-# print train_result['Response'].value_counts()
-
-col = list(train_result.columns.values)
-result_ind = list(train_result[col[0]].value_counts().index)
-train_result = np.array(train_result).ravel()
-
-train = pd.DataFrame.from_csv('ensemble_train_predictions_xgboost_v3.csv')
-train = np.array(train)
-
-test = pd.DataFrame.from_csv('ensemble_xgboost_v3.csv')
-test = np.array(test)
-
-splitter_old = np.array([2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477])
-riskless_splitter = np.array([1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5])
-
 best_risk = 0
 best_score = 0
 best_splitter = 0
@@ -172,7 +190,7 @@ best_splitter = 0
 param_grid = [
               {'silent': [1], 'nthread': [3], 'eval_metric': ['rmse'], 'eta': [0.01],
                'objective': ['reg:linear'], 'max_depth': [7], 'num_round': [600], 'fit_const': [0.5],
-               'subsample': [0.75], 'risk': [1.0]}
+               'subsample': [0.75], 'risk': [0.9]}
              ]
 
 print 'start CV'
@@ -199,12 +217,14 @@ for params in ParameterGrid(param_grid):
 
         # predict
         predicted_results = xgclassifier.predict(xg_test)
-        train_test_predictions[test_index] = predicted_results
-        splitter = opt_cut_global(predicted_results, y_test)
-        # train machine learning
-        res = optimize.minimize(opt_cut_local, splitter, args=(predicted_results, y_test), method='Nelder-Mead',
+        predicted_self_results = xgclassifier.predict(xg_train)
+        splitter = opt_cut_global(predicted_self_results, y_train)
+        res = optimize.minimize(opt_cut_local, splitter, args=(predicted_self_results, y_train), method='Nelder-Mead',
                                 # options={'disp': True}
                                 )
+        train_test_predictions[test_index] = predicted_results
+        # train machine learning
+
         # print res.x
         cur_splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
         it_splitter.append(cur_splitter)
@@ -221,7 +241,8 @@ for params in ParameterGrid(param_grid):
         it_splitter = np.array(it_splitter)
         best_splitter = np.average(it_splitter, axis=0)
 
-pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_xgboost_v3.csv')
+print best_risk, best_score
+# pd.DataFrame(train_test_predictions).to_csv('ensemble_train_predictions_xgboost_v3.csv')
 print 'Calculating final splitter'
 splitter = opt_cut_global(train_test_predictions, train_result)
 # train machine learning
@@ -231,7 +252,6 @@ res = optimize.minimize(opt_cut_local, splitter, args=(train_test_predictions, t
 classified_predicted_results = np.array(ranking(train_test_predictions, res.x)).astype('int')
 print pd.Series(classified_predicted_results).value_counts()
 print quadratic_weighted_kappa(train_result, classified_predicted_results, 1, 8)
-splitter = list(params['risk'] * res.x + (1 - params['risk']) * riskless_splitter)
 
 # train machine learning
 xg_train = xgboost.DMatrix(train, label=train_result)
@@ -245,7 +265,14 @@ xgclassifier = xgboost.train(params, xg_train, num_round, watchlist);
 
 # predict
 predicted_results = xgclassifier.predict(xg_test)
-splitter = splitter_old
+# pd.DataFrame(predicted_results).to_csv('ensemble_test_predictions_xgboost_v3.csv')
+
+predicted_self_results = xgclassifier.predict(xg_train)
+splitter = opt_cut_global(predicted_self_results, train_result)
+res = optimize.minimize(opt_cut_local, splitter, args=(predicted_self_results, train_result), method='Nelder-Mead',
+                        options={'disp': True}
+                        )
+splitter = list(best_risk * res.x + (1 - best_risk) * riskless_splitter)
 print splitter
 print 'writing to file'
 classed_results = np.array(ranking(predicted_results, splitter)).astype('int')
@@ -280,3 +307,15 @@ submission_file.to_csv("ensemble_xgboost_oldsplitter_v3.csv")
 # 3    1440
 # 2    1179
 
+# Using splitter = [2.46039684, 3.48430979, 4.30777339, 4.99072484, 5.59295844, 6.17412558, 6.79373477]
+# test:  LB: 0.66695
+# 8    6189
+# 7    2808
+# 5    2357
+# 6    2129
+# 4    1866
+# 3    1752
+# 2    1600
+# 1    1064
+
+# need to check non startified k-fold
