@@ -28,11 +28,11 @@ def dummy_2d(dataset, column):
     print '2d dummying %s' % column
     index = dataset.index
     dataset = list(dataset[column].astype('str'))
-    dataset_1 = map(lambda x: x[0], dataset)
+    dataset_1 = map(lambda x: ord('E') - ord(x[0]), dataset)
     dataset_2 = map(lambda x: x[1], dataset)
     dataset_1 = np.array(dataset_1).reshape((len(dataset_1), 1))
     dataset_2 = np.array(dataset_2).reshape((len(dataset_2), 1))
-    dataset = pd.get_dummies(pd.DataFrame(np.hstack((dataset_1, dataset_2))))
+    dataset = pd.DataFrame(np.hstack((dataset_1, dataset_2)))
     dataset.index = index
     dataset = add_prefix(dataset, column)
     # print dataset
@@ -57,7 +57,7 @@ def dummy_num(dataset, column):
     for i in range(n_dig):
         dataset_digits.append(map(lambda x: x[i], dataset))
         dataset_digits[i] = np.array(dataset_digits[i]).reshape((len(dataset_digits[i]), 1))
-    dataset = pd.get_dummies(pd.DataFrame(np.hstack(tuple(dataset_digits))))
+    dataset = pd.DataFrame(np.hstack(tuple(dataset_digits)))
     dataset.index = index
     dataset = add_prefix(dataset, column)
     # print dataset
@@ -83,20 +83,15 @@ need_dummying = ['Product_Info_1', 'Product_Info_3', 'Product_Info_5', 'Product_
                  'Medical_History_37', 'Medical_History_38', 'Medical_History_39', 'Medical_History_40',
                  'Medical_History_41']
 
-chk_linearity = ['Product_Info_4', 'Ins_Age', 'Ht', 'Wt', 'BMI', 'Employment_Info_1', 'Employment_Info_4',
-                 'Employment_Info_6', 'Insurance_History_5', 'Family_Hist_2', 'Family_Hist_3', 'Family_Hist_4',
-                 'Family_Hist_5', 'Medical_History_1', 'Medical_History_10', 'Medical_History_15',
-                 'Medical_History_24', 'Medical_History_32']
-
 # preprocess test data
 print 'read train data'
 trainset = pd.DataFrame.from_csv('train.csv', index_col=0)
+train_index = trainset.index
 train_result = trainset['Response']
 
 # print train_result.value_counts()
 # train_result.to_csv("train_result.csv")
 
-trainset_cols = list(trainset.columns.values)
 trainset = trainset.drop('Response', axis=1)
 trainset = trainset.fillna('-1')
 
@@ -104,84 +99,42 @@ trainset = trainset.fillna('-1')
 print 'read test data'
 testset = pd.DataFrame.from_csv('test.csv', index_col=0)
 testset = testset.fillna('-1')
+test_index = testset.index
 
-for col_name in need_dummying:
-    print trainset[col_name].value_counts()
-
-for col_name in chk_linearity:
-    col = trainset[col_name].astype('float').values
-    plt.plot(col, train_result, 'ro')
-    plt.show()
-    col_sqrd = col ** 2
-    trainset[col_name + 'sqrd'] = col_sqrd
-    col = testset[col_name].astype('float').values
-    col_sqrd = col ** 2
-    testset[col_name + 'sqrd'] = col_sqrd
-
+data = pd.concat([trainset, testset])
 
 # special dummies
-train_p_info2_dummy = dummy_2d(trainset, 'Product_Info_2')
-trainset = trainset.drop('Product_Info_2', axis=1)
-test_p_info2_dummy = dummy_2d(testset, 'Product_Info_2')
-testset = testset.drop('Product_Info_2', axis=1)
+p_info2_dummy = dummy_2d(data, 'Product_Info_2')
+data = data.drop('Product_Info_2', axis=1)
+m_history2_dummy = dummy_num(data, 'Medical_History_2')
+data = data.drop('Medical_History_2', axis=1)
 
-train_m_history2_dummy = dummy_num(trainset, 'Medical_History_2')
-trainset = trainset.drop('Medical_History_2', axis=1)
-test_m_history2_dummy = dummy_num(testset, 'Medical_History_2')
-testset = testset.drop('Medical_History_2', axis=1)
+data = pd.concat([data, p_info2_dummy, m_history2_dummy], axis=1)
 
-# trainset[need_dummying] = trainset[need_dummying].astype(str)
-n = trainset.shape[0]
-# testset[need_dummying] = testset[need_dummying].astype(str)
-n_test = testset.shape[0]
-
-# sparsity = 0.95
-# sparsity = n * (1 - sparsity)
-# sparsity = n_test * (1 - sparsity)
+# location_ranking_1 = list(target1.location.value_counts().index)
+# location_ranking_1_n = len(location_ranking_1)
+# for loc in unique_locations:
+#     if not(loc in location_ranking_1):
+#         location_ranking_1.append(loc)
+# location_ranking_1 = pd.Series(np.arange(len(location_ranking_1)), index=location_ranking_1)
+# for i in range(location_ranking_1_n, unique_locations_n):
+#     location_ranking_1.iat[i] = 2000
+# print location_ranking_1
+#
+# full_data['location_sorted1'] = np.zeros((full_data.shape[0],))
+# for i in range(len(full_data)):
+#     cur_loc = full_data['location'].iloc[i]
+#     full_data['location_sorted1'].iat[i] = location_ranking_1.loc[cur_loc]
+# print full_data['location_sorted1']
+train = data.loc[train_index]
+test = data.loc[test_index]
 
 # Plotting
-
-print 'dummy train / test variables'
-dummies = []
-dummies_test = []
 for var in need_dummying:
-    print 'dummyfing %s' % var
-
+    print 'var %s' % var
     print trainset[var].value_counts()
-    dummy_col = pd.get_dummies(trainset[var])
-    add_prefix(dummy_col, var + '_')
-    dummy_col.index = trainset.index
-    dummies.append(dummy_col)
-    trainset = trainset.drop(var, axis=1)
-
     print testset[var].value_counts()
-    dummy_col = pd.get_dummies(testset[var])
-    add_prefix(dummy_col, var + '_')
-    dummy_col.index = testset.index
-    dummies_test.append(dummy_col)
-    testset = testset.drop(var, axis=1)
-
-train = pd.concat([trainset, train_p_info2_dummy, train_m_history2_dummy] + dummies, axis=1)
-# train = remove_sparse(train, sparsity * 0.25)
-
-test = pd.concat([testset, test_p_info2_dummy, test_m_history2_dummy] + dummies_test, axis=1)
-# test = remove_sparse(test, sparsity * 0.25)
-
-# Find common coloumns
-col_train = list(train.columns.values)
-print col_train
-col_test = list(test.columns.values)
-print col_test
-col_common = []
-# add only common columns for train and test
-for col in col_train:
-    if col in col_test:
-        col_common.append(col)
-print col_common
-
-train = train[col_common]
-test = test[col_common]
 
 print 'write to data'
-# train.to_csv("train_dummied_v3.csv")
-# test.to_csv("test_dummied_v3.csv")
+train.to_csv("train_v4.csv")
+test.to_csv("test_v4.csv")
